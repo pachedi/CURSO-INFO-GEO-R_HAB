@@ -1,0 +1,4 @@
+"0",""
+"0","ggplot(data=mendoza)+"
+"0","  geom_sf(col = NA, aes(fill= tasa_desocupacion))"
+"0",""

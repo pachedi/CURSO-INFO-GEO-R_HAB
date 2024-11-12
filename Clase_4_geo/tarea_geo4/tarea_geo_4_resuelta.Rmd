@@ -1,0 +1,161 @@
+---
+title: "Clase 4 - TAREA GEO"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    #number_sections: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## Instalar paquete rspain
+```{r}
+
+#install.packages("mapSpain", dependencies = TRUE)
+
+
+```
+
+## Cargar librerías
+```{r}
+
+library(sf)
+library(tidyverse)
+library(leaflet)
+library(mapSpain)
+library(tidyterra)
+library(osmdata)
+library(ggspatial)
+```
+
+## 1-Obtener el mapa de A Coruña (Galicia)
+
+```{r}
+
+acoruna <- nominatimlite::geo_lite_sf(address = "La Coruna, Galicia,Spain", points_only = FALSE)
+
+```
+
+
+## 2-Agregar la capa en leaflet
+```{r}
+
+leaflet(acoruna) %>% 
+  addTiles() %>% 
+  addPolygons()
+
+
+```
+
+
+## 3-Obtener y mapear las calles de La Coruña
+```{r}
+
+coruna_calles <- opq(st_bbox(acoruna)) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+coruna_calles <- st_intersection(coruna_calles$osm_lines, acoruna)
+
+ggplot()+
+  geom_sf(data=acoruna, col= "red")+
+  geom_sf(data=coruna_calles)
+
+```
+
+## 3-Obtener los puntos donde hay escuelas y mapearlo
+```{r}
+
+acoruna_edu <- opq(st_bbox(acoruna)) %>% 
+  add_osm_feature(key = "amenity", value = "school") %>% 
+  osmdata_sf()
+
+acoruna_edu <- st_intersection(acoruna_edu$osm_points, acoruna)
+```
+
+
+```{r}
+
+
+ggplot()+
+  geom_sf(data=acoruna, col= "red")+
+  annotation_map_tile(type = "osm", zoom = 12)+
+  geom_sf(data=coruna_calles)+
+  geom_sf(data= acoruna_edu, col="green", alpha= 0.3)+
+  labs(title = "Escuelas en La Coruña",
+       subtitle = "España",
+       caption="Elaboración propia en base a OSM")
+
+```
+
+
+```{r}
+```
+
+
+## 4-Cargar los Municipios de Galicia (galicia_munis.shp) / Carcular el area de los Municipios / Crear un mapa que llene los colores de los municipios por area
+
+```{r}
+galicia <- esp_get_munic_siane(region = "Galicia", epsg = 4326, moveCAN = TRUE)
+```
+
+```{r}
+library(units)
+library(viridisLite)
+#galicia <- st_read("bases_tarea/galicia_munis.shp")
+
+class(galicia)
+
+galicia
+
+galicia$geometry <- st_make_valid(galicia$geometry)
+
+
+area <-  st_area(galicia$geometry)
+
+units(area)<- make_units(km^2)
+
+galicia$area = round(as.numeric(area),2)
+
+binpal <- colorBin("viridis", galicia$area, 8, pretty = FALSE)
+
+ggplot()+
+  annotation_map_tile(type = "osm", zoom = 12)+
+  geom_sf(data= galicia, aes(fill=area))
+
+
+
+```
+
+
+
+
+## 5-Crear gráfico interactivo con el mapa de Galicia en leaflet llenando los polígonos por la variable "área"
+
+```{r}
+pal <- colorNumeric(palette = "YlOrRd", domain = galicia$area)
+
+leaflet(galicia) %>% 
+  addTiles() %>% 
+  addPolygons(
+    fillColor = ~pal(area),      # Rellena el área 
+    fillOpacity = 0.5,       # Ajusta la opacidad del relleno
+    color = "black",         # Color del borde del polígono
+    weight = 1 ,# Grosor del borde del polígono
+    popup = ~paste("Área:", area)
+  ) %>%
+  addLegend(
+    pal = pal,
+    values = galicia$area,
+    title = "Área",
+    position = "bottomright"
+  )
+
+
+```

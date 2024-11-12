@@ -1,0 +1,4 @@
+"0",""
+"0","capa_dengue <- capa_dengue %>%"
+"0","  dplyr::mutate(lon = sf::st_coordinates(.)[,1],"
+"0","                lat = sf::st_coordinates(.)[,2])"

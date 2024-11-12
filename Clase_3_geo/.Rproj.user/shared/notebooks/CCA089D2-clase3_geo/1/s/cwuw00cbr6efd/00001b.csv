@@ -1,0 +1,7 @@
+"0",""
+"0","ggplot()+"
+"0","  geom_sf(data = barrios, aes(fill=distancia_promedio))+"
+"0","  geom_sf(data = filter(barrios, BARRIO == ""SAN NICOLAS""), fill=""orange"")+"
+"0","  geom_sf(data = filter(barrios, BARRIO == ""VILLA REAL""), fill=""red"")+"
+"0","  scale_fill_viridis_c(name= ""Distancia promedio a\nestaciones de subte (metros)"")"
+"0",""

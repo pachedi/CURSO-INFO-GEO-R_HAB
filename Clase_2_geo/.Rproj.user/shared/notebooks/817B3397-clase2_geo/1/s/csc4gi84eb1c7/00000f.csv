@@ -1,0 +1,19 @@
+"0",""
+"0","prj_dd <- ""+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"""
+"0",""
+"0","elev <- get_elev_raster(datos_elevacion, prj = prj_dd, z = 10, clip = ""bbox"")"
+"2",""
+"2"," Accessing raster elevation [-------------------------]   0%"
+"2",""
+"2"," Accessing raster elevation [=========================] 100%"
+"2","
+"
+"1",""
+"2","Mosaicing & Projecting
+"
+"2","Clipping DEM to bbox
+"
+"2","Note: Elevation units are in meters.
+"
+"0","raster::contour(elev)"
+"0",""

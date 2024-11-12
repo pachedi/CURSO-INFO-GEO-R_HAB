@@ -1,0 +1,8 @@
+"0",""
+"0","ggplot(data=caba)+"
+"0","  geom_sf(data=rivadavia, aes(col=""red""))+"
+"0","  geom_sf(aes(fill= COMUNAS))+"
+"0","  labs(title = ""Mapa de la CABA por comuna:"")+"
+"0","  theme_void()+"
+"0","  theme(legend.position = ""None"")"
+"0",""

@@ -1,0 +1,107 @@
+---
+title: "Clase 3 - TAREA GEO"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    #number_sections: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## 1-Graficar un mapa de las comunidades autónomas de España coloreado por Comunidad autónoma quitando Canarias e Islas Baleares
+
+Cargar librerías
+```{r}
+
+library(sf)
+library(tidyverse)
+library(ggrepel)
+library(units)
+library(openxlsx)
+library(ggspatial)
+
+```
+```{r}
+
+`%ni%` <- Negate(`%in%`)
+
+```
+
+
+```{r , echo=F}
+
+espana <- st_read("Comunidades_autonomas/Comunidades_Autonomas_ETRS89_30N.shp")
+
+
+espana_sin_isla <- espana %>% 
+  filter(Texto %ni% c("Islas Baleares", "Canarias"))
+
+ggplot()+
+  geom_sf(data = espana_sin_isla, aes(fill=Texto))+
+  theme(legend.position = "none")
+
+
+
+```
+
+## 2-Conectarse al WFS de España:
+
+
+wfs_espana <-st_layers("WFS:https://mapas.fomento.gob.es/arcgis/services/SIU/Servicios_OGC/MapServer/WFSServer")
+
+Obtener la lista de capas disponibles
+
+```{r  , echo=F}
+
+capas_espana <-st_layers("WFS:https://mapas.fomento.gob.es/arcgis/services/SIU/Servicios_OGC/MapServer/WFSServer")
+
+capas_espana$name
+
+
+```
+
+
+## 3-Descargar la capa "Servicios_OGC:OGC_Areas_Urbanas"
+```{r  , echo=F}
+
+url <- "https://mapas.fomento.gob.es/arcgis/services/SIU/Servicios_OGC/MapServer/WFSServer/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
+
+capa_wfs <- "Servicios_OGC:OGC_Areas_Urbanas"
+
+areas_urbanas_esp <- st_read(paste0(url,capa_wfs))
+
+
+```
+
+## 4-Graficar la capa de zonas urbanas encima de la capa de Comunidades autónomas sin contar las islas del sur.
+Pista: pueden crear la función `%ni%` <- Negate(`%in%`) como "not in"
+```{r  , echo=F}
+
+`%ni%` <- Negate(`%in%`)
+
+filtrado = areas_urbanas_esp %>% 
+  filter(NOMBRE_AU_RED %ni% c("Palma de Mallorca",  "Gran Canaria Sur", "Tenerife Sur", "Las Palmas de Gran Canaria","Santa Cruz de Tenerife - La Laguna", "Valle de la Orotava", "Arrecife"))
+
+espana_sin_isla <- espana %>% 
+  filter(Texto %ni% c("Islas Baleares", "Canarias"))
+
+
+ggplot( )+
+  geom_sf(data= espana_sin_isla)+
+  geom_sf(data =filtrado,aes(fill=NOMBRE_AU_RED), col=NA)+
+  scale_fill_discrete()+
+  labs(title="Zonas Urbanas", subtitle = "España",
+       caption = "Fuente:Elaboración propia en base a datos abiertos")+
+  theme_void()+
+  theme(legend.position = "none")+
+  theme(panel.border = element_rect(colour = "black", fill=NA, linewidth =2))
+
+
+```
+

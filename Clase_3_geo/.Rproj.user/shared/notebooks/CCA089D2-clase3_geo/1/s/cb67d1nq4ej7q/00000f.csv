@@ -1,0 +1,17 @@
+"0","ggplot()+"
+"2","Warning messages:
+"
+"2","1: "
+"2","In is.na(output) || !is.character(output) :"
+"2","
+ "
+"2"," 'length(x) = 3 > 1' in coercion to 'logical(1)'
+"
+"2","2: "
+"2","In more || nchar(output) > 80 :"
+"2","
+ "
+"2"," 'length(x) = 3 > 1' in coercion to 'logical(1)'
+"
+"0","  geom_sf(data=caba)"
+"0",""

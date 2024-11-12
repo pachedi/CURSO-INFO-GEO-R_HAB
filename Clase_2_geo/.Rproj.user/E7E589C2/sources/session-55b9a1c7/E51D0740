@@ -1,0 +1,28 @@
+{
+    "id": "E51D0740",
+    "path": null,
+    "project_path": null,
+    "type": "object_explorer",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1708049758965.0,
+    "source_on_save": false,
+    "relative_order": 5,
+    "properties": {
+        "id": "d6d7e00800db4653835f50ae0b087452",
+        "name": "wfs_espana",
+        "title": "wfs_espana",
+        "language": "R",
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 15,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1708049758965,
+    "read_only": false,
+    "read_only_alternatives": []
+}

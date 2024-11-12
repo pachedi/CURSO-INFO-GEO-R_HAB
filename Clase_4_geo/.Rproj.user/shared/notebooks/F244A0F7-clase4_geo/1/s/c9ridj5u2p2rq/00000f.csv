@@ -1,0 +1,4 @@
+"0","ruta <- ors_directions(coordenadas)
+"
+"2","Error in ors_directions(coordenadas) : object 'coordenadas' not found
+"

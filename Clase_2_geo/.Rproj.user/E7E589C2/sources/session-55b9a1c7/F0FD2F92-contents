@@ -1,0 +1,697 @@
+---
+title: "Clase 3 - R GEO"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    #number_sections: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r}
+
+
+library(sf)
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(leaflet)
+library(htmltools)
+library(ows4R)
+
+```
+
+
+## WFS INDEC
+
+WFS refiere a Web Feature Service que es básicamente un servicios al que podemos conectarnos para obtener bases de datos geográficas.
+Vamos a aprender entonces a conectranos al WFS del INDEC para descargar información geográfica.
+Si buscamos en internet "indec geoservicios" nos obtendremos la siguiente url:
+http://geoservicios.indec.gov.ar/geoserver/wfs
+Esa va a ser la url básica para conectarnos con el servicio.
+Los WFS tienen 11 operaciones básicas:
+
+GetCapabilities (discovery operation)
+DescribeFeatureType (discovery operation)
+GetPropertyValue (query operation)
+GetFeature (query operation)
+GetFeatureWithLock (query & locking operation)
+LockFeature (locking operation)
+Transaction (transaction operation)
+CreateStoredQuery (stored query operation)
+DropStoredQuery (stored query operation)
+ListStoredQueries (stored query operation)
+DescribeStoredQueries (stored query operation)
+
+[link](https://www.ogc.org/standard/wfs/#:~:text=The%20Web%20Feature%20Service%20(WFS,and%20exchanged%20on%20the%20Internet)
+
+En este caso utilizaremos 2: 
+Getfeature y GetCapabilities
+
+Get capabilities nos permitirá ver el menú de opciones disponibles para descargar:
+```{r}
+
+indec_wfs <-st_layers("WFS:http://geoservicios.indec.gov.ar/geoserver/wfs?getcapabilities")
+
+```
+Vamos a la lista name y encontraremos los nombres disponibles de las capas para descargar.
+```{r}
+
+indec_wfs$name
+
+```
+
+
+Ahora, debemos "construir" la url para lograr descargar los datos.
+La url tiene distintos parámetros que debemos cumplir.
+En request indicamos "GetFeature" porque queremos obtener la capa.
+En service = WFS que es el tipo de servicio que estamos llamando.
+srsName indicamos EPSG:4326 que responde a la representación cartográfica utilizada actualmente. 
+typenName indicamos el nombre de la capa que obtuvimos con GetCapabilities.
+
+```{r}
+# https://gefero.github.io/blog/2019/03/14/Consultando-mapas
+
+# https://inbo.github.io/tutorials/tutorials/spatial_wfs_services/
+
+url <- "https://geoservicios.indec.gob.ar/geoserver/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
+
+capa_wfs <- "geocenso2010:actividad_radio"
+
+actividad_radios <- st_read(paste0(url,capa_wfs))
+
+```
+
+
+```{r}
+
+#renaper <- st_layers("WFS:https://poblacion.idear.gov.ar/geoserver/wfs?getcapabilities")
+
+#renaper$name
+
+ggplot(data = actividad_radios)+
+  geom_sf(aes(fill=tasa_desocupacion), col=NA)+
+  scale_fill_viridis_c()
+
+
+```
+
+[Catalogo de geoservicios](https://catalogos.conae.gov.ar/catalogo/catalogoGeoServiciosOGC.html)
+
+Podemos por ejemplo descargar una nueva capa
+```{r}
+
+url_po <- "https://poblacion.idear.gov.ar/geoserver/wfs?request=GetFeature&service=WFS&typeName="
+capa_wfs <- "geonode:comunidades_indigenas_2021"
+com_indi <- st_read(paste0(url_po,capa_wfs))
+
+```
+
+Visualizamos.
+```{r}
+
+ggplot(data=com_indi)+
+  geom_sf()
+
+```
+
+¿Qué pasa si quisiéramos filtrar una provinciao departamento?
+No tenemos esa información. Por lo cual, debemos primero descargar las capas de departamentos y provincias y hacer los correspondientes joins.
+
+```{r}
+
+wfs_radios_codigo <- "geocenso2010:radios_codigo"
+wfs_deptos <- "sig:v_departamentos"
+wfs_prov <- "sig:v_provincias"
+
+
+radios_codigo <- st_read(paste0(url,wfs_radios_codigo ))
+
+
+```
+
+Es posible realizar un join espacial, pero no es este el caso. Lo que queremos es realiar un join simplemente con información de columnas.
+Para hacerlo, debemos transformar los objetos sf en df comunes.
+Luego, realizamos el join a través de la columns "link" que comparten.
+```{r}
+
+actividad_radios <- as.data.frame(actividad_radios)
+
+radios_codigo <- as.data.frame(radios_codigo)
+
+
+radios_join <- left_join(actividad_radios, radios_codigo, by="link")
+
+
+```
+
+Descargamos la capa de departamentos
+```{r}
+
+cod_depto <-  st_read(paste0(url,wfs_deptos ))
+
+```
+
+Tenemos que crear entonces un link que coincida con el link de la base de deptos para realizar el join.
+El código que necesitamos es la combinación entre el código de provincia y el código de departamento.
+Creamos entonces esa columna.
+```{r}
+
+
+radios_join$nuevo_coddepto <- paste0(radios_join$codpcia, radios_join$coddpto)
+
+
+```
+
+Convertimos en df la base de deptos y realizamos el nuevo join.
+```{r}
+
+cod_depto <- as.data.frame(cod_depto)
+
+cod_depto <- cod_depto %>% 
+  dplyr::select(nombre, link)
+
+
+radios_join <- left_join(radios_join, cod_depto, by= c("nuevo_coddepto" ="link"))
+
+```
+
+
+Ahora nos queda agregar el código de provincia.
+```{r}
+
+
+cod_prov <- st_read(paste0(url,wfs_prov))
+
+cod_prov   <- as.data.frame(cod_prov)
+
+```
+
+Realizamos el join.
+```{r}
+
+cod_prov  <- cod_prov %>% 
+  dplyr::select(nombre, link )
+
+radios_join <- left_join(radios_join, cod_prov, by=c("codpcia" = "link"))
+
+
+```
+
+No olvidemos ahora, volver a transformar nuestra base en SF
+```{r}
+
+radios_join  <-  st_sf(radios_join, sf_column_name = 'geom.x')
+
+```
+
+¡Ahora sí! Filtremos entonces por alguna provincia.
+```{r}
+
+mendoza <- radios_join %>% 
+  filter(nombre.y == "Mendoza")
+
+buenosaires <- radios_join %>% 
+  filter(nombre.y == "Buenos Aires")
+
+caba <- radios_join %>% 
+  filter(nombre.y == "Ciudad Autónoma de Buenos Aires" )
+
+class(caba)
+names(buenosaires)
+
+
+# veinticuatro <- buenosaires %>% 
+#   filter(nombre.x %in% gba_veinticuatro)
+# 
+# cuarenta <- buenosaires %>% 
+#   filter(nombre.x %in% cuarenta)
+
+unique(radios_join$nombre.y)
+
+```
+
+Grafiquemos
+```{r}
+
+ggplot(data=mendoza)+
+  geom_sf(col = NA, aes(fill= tasa_desocupacion))
+
+```
+
+## WMS
+
+WMS refiere a Servicio de Mapa Web (Web Map Service).
+
+Según [Wikipedia](https://es.wikipedia.org/wiki/Web_Map_Service):
+El servicio Web Map (WMS) definido por el OGC (Open Geospatial Consortium) produce mapas de datos referenciados espacialmente, de forma dinámica a partir de información geográfica. Este estándar internacional define un "mapa" como una representación de la información geográfica en forma de un archivo de imagen digital conveniente para la exhibición en una pantalla de ordenador. Un mapa no consiste en los propios datos. Los mapas producidos por WMS se generan normalmente en un formato de imagen como PNG, GIF o JPEG, y opcionalmente como gráficos vectoriales en formato SVG (Scalable Vector Graphics) o WebCGM (Web Computer Graphics Metafile).
+
+
+Conectemos al WMS del Ministerio de Ciencia y técnica para obtener una imagen satelital de Argentina. [Catálogo](https://catalogos.conae.gov.ar/catalogo/catalogoGeoServiciosOGC.html#temas)
+
+En primer lugar llamamos a la url del mapa.
+
+```{r}
+mapa_satelite <- "https://geoservicios.conae.gov.ar/geoserver/SACC/wms"
+```
+
+Luego, con la librería leaflet podemos visualizar la capa.
+Es importante tener en cuenta que sólo se logrará visualizar la imagen si pasamos el parámetro "layers". Ese parámetro lo encontramos en la documentación del WMS.
+En este caso [aquí](https://catalogos.conae.gov.ar/catalogo/catalogoGeoServiciosOGC.html#temas).
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng =  -58.3895861, lat=-34.6107111  , zoom = 9) %>%
+  addWMSTiles(
+    mapa_satelite,
+    layers = "Mosaico_SACC",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  )  
+
+```
+
+Podemos agregar una nueva capa sumando WMSTiles
+
+```{r}
+dengue <- "https://geoservicios.conae.gov.ar/geoserver/HAPN/wms"
+```
+
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng =  -58.3895861, lat=-34.6107111  , zoom = 9) %>%
+  addWMSTiles(
+    mapa_satelite,
+    layers = "Mosaico_SACC",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  ) %>% 
+  addWMSTiles(
+    dengue,
+    layers = "HAPN:RiesgoAmbiental2022",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE
+                             )
+  ) 
+
+```
+
+
+```{r}
+
+wfs_conae <- st_layers("WFS:https://geoservicios.conae.gov.ar/geoserver/HAPN/wfs?getcapabilities")
+
+```
+
+
+```{r}
+wfs_conae$name
+```
+```{r}
+
+url_conae <- "https://geoservicios.conae.gov.ar/geoserver/HAPN/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
+
+nombre_capa <- "HAPN:RiesgoAmbiental2022"
+
+capa_dengue <- st_read(paste0(url_conae,nombre_capa))
+
+```
+Para cargar un punto en leaflet() debemos tener separadas la latitud y longitud.
+Eso lo realizamos con la función st_coordinates()
+```{r}
+
+capa_dengue <- capa_dengue %>%
+  dplyr::mutate(lon = sf::st_coordinates(.)[,1],
+                lat = sf::st_coordinates(.)[,2])
+```
+
+Lo agregamos como marker
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng =  -58.3895861, lat=-34.6107111  , zoom = 9) %>%
+  addWMSTiles(
+    mapa_satelite,
+    layers = "Mosaico_SACC",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  ) %>% 
+  addMarkers(data = capa_dengue, lng = ~lon, lat = ~lat,
+            clusterOptions =  markerClusterOptions(),
+            icon = list(
+    iconUrl = 'https://www.iconarchive.com/download/i137263/microsoft/fluentui-emoji-3d/Mosquito-3d.512.png',
+    iconSize = c(75, 75))
+    )
+
+
+```
+
+
+## Conexión API CABA
+
+¿Qué es una API?
+API refiere a "interfaz de programación de aplicaciones" (application programming interface) y lo que hace es realizar una interacción entre dos aplicaciones. 
+La interacción se realizar entre un cliente (que hace la demanda) y un servidor (que responde a esa demanda)
+El repositorio de datos de CABA tiene desarrollada una API con la cual es posible conectarse a través de RStudio.
+
+Para conectarse hay que tener un token:
+[registro](https://api-transporte.buenosaires.gob.ar/registro)
+
+Las APIs suele tener documentación que nos provee la información necesaria para poder conectarnos y realizar las consultas necesarias.
+
+API DOC:
+[documetación](https://api-transporte.buenosaires.gob.ar/console)
+
+Con la API del GCBA, podemos obtener información de transporte.
+Vamos a trabajar para crear una mini app que nos devuelva información sobre la posición de una línea de colectivos.
+En primer lugar tenemos que tomar la url de la API :
+```{r}
+
+url='https://apitransporte.buenosaires.gob.ar/colectivos/vehiclePositionsSimple?'
+
+```
+
+Luego, tenemos que pasar como parámetros nuestros token de seguridad.
+
+* vclient_id="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+* vclient_secret="xxxxxxxxxxxxxxxxxxxxxxxx"
+
+```{r include=FALSE}
+
+client_id = "60e745a216294723b27f83ff2a6e13b9"
+
+client_secret = "358a4D45EECa42EF954Ff8eB492A37B5"
+
+```
+
+Realizamos el GET para obtener respuesta de la API.
+GET es justamente una función para obtener información de la API.
+En el GET, les especificamos la url y la query (es decir la consulta)
+```{r }
+
+request <- GET(
+  url = url,
+  query = list(client_id = client_id,
+               client_secret = client_secret)
+)
+
+```
+
+
+Veamos qué contiene esta lista:
+```{r}
+
+names(request)
+
+```
+
+Revisemos cuál fue el status de la respuesta:
+[Status](https://developer.mozilla.org/es/docs/Web/HTTP/Status)
+```{r}
+
+request$status_code
+
+```
+
+Ahora bien, lo que debemos hacer es codificar esta información que proviene de la API para transformarla en un data frame y volverlo manipulable y comprensible.
+Para eso, en primer lugar tomamos el contenido de la respuesta de la API que está situado en "content" y le indicamos que queremos que el encoding sea para español, es decir UTF-8.
+De esta manera, transformamos la información en formato JSON (java script objecto notation)
+```{r}
+
+response <- content(request, as = "text", encoding = "UTF-8")
+
+```
+
+Luego, transformamos ese objeto en un data frame:
+```{r}
+
+df <- fromJSON(response) %>% 
+  data.frame()
+
+```
+
+Ahora ya tenemos disponible la información como tabla.
+Exploremos un poco el df.
+```{r}
+
+summary(df)
+
+```
+Tenemos los puntos (latitud y longitud) de los colectivos que atraviesan la CABA.
+Como sabemos, hay muchas líneas de colectivos y eso va a hacer que sea demasiado lenta la carga. Por eso, vamos a filtrar primero por una línea de colectivos.
+```{r}
+
+
+sesenta = df %>% 
+  filter(route_short_name == "60A")
+  
+
+```
+
+Ahora utilizando el paquete leaflet, que es un mapa interactivo, podemos visualizarlo en el mapa:
+```{r}
+
+leaflet(sesenta) %>% 
+  addTiles() %>% 
+  addMarkers(lng = ~ longitude, 
+             lat = ~ latitude)
+
+```
+
+
+
+Podemos también cambiar el ícono para que tenga más relación con el objeto que estamos monitoreando.
+```{r}
+
+bondi <- makeIcon(
+  iconUrl = "https://www.iconarchive.com/download/i139055/microsoft/fluentui-emoji-flat/Bus-Flat.512.png",
+  iconWidth = 20, iconHeight = 20)
+
+```
+
+
+```{r}
+
+leaflet(sesenta) %>% 
+  addTiles() %>% 
+  addMarkers(lng = ~ longitude, 
+             lat = ~ latitude,
+             icon = bondi)
+
+
+```
+
+Por último, la API actualiza esta información cada 30 segundos.
+Lo que podemos hacer entonces para monitorear una línea es generar un loop que llame a la API cada 30 segundos y nos actualice el mapa.
+Utilizamos el mismo código sólo que lo incluimos dentro de un while infinito.
+Le damos 30 segundos de espera para que actualice y vuelva a desplegar el mapa.
+```{r}
+
+#while(TRUE){
+  
+url='https://apitransporte.buenosaires.gob.ar/colectivos/vehiclePositionsSimple?'
+
+request <- GET(
+  url = url,
+  query = list(client_id = client_id,
+               client_secret = client_secret)
+)
+
+request$status_code
+
+response <- content(request, as = "text", encoding = "UTF-8")
+
+df <- fromJSON(response) %>% 
+  data.frame()
+
+cientotreinta <- df %>% 
+  filter(route_short_name =="130A")
+
+bondi <- makeIcon(
+  iconUrl = "https://www.shareicon.net/download/128x128//2015/10/19/658777_transport_512x512.png",
+  iconWidth = 30, iconHeight = 30)
+
+mapa <- leaflet(cientotreinta) %>%
+  addTiles() %>%  
+  #setView(lng = -58.3815859, lat = -34.6039273, zoom = 8) %>% 
+  addMarkers(lng =  ~ longitude,
+             lat =  ~ latitude,
+             icon =bondi)
+
+print(mapa)
+
+#Sys.sleep(30)
+#}
+
+```
+
+## Calcular distancias.
+Trabajemos sobre la accesibilidad en la CABA. Lo que vamos a hacer es calcular la distancia de los radios censales a una estación de subte. 
+En primer lugar cargamos la base de radios censales de CABA.
+```{r}
+
+
+caba <- read_sf("bases_clase3/caba_radios/caba.shp", crs=4326)
+ggplot()+
+  geom_sf(data=caba)
+
+```
+
+Luego, cargamos las estaciones de subte:
+
+```{r}
+
+subte <- st_read("bases_clase3/estaciones-de-subte/estaciones-de-subte.shp",
+                 crs=4326)
+
+```
+Primera visualización:
+```{r}
+
+ggplot()+
+  geom_sf(data=caba)+
+  geom_sf(data=subte, aes(col=LINEA))
+
+```
+
+Para calcular distancias, tenemos que hacerlo desde un punto a otro.
+En este caso tenemos poligónos (radios censales) contra puntos. Por lo cual, debemos transformar los polígonos en puntos y de esa manera calcular la distancia hasta las estaciones de subte.
+```{r}
+
+radios_puntos <- st_point_on_surface(caba)
+
+subte_puntos <- st_point_on_surface(subte)
+
+```
+
+Grafiquemos. Tal como podemos observar, se crearon puntos en el centro de cada uno de los radios censales de la CABA.
+```{r}
+
+ggplot()+
+  geom_sf(data= caba)+
+  geom_sf(data= radios_puntos, size= 0.5)
+
+```
+Lo que necesitamos entonces es que cada centroide de los radios encuentre la estación de subte más cercana y calcule la distancia a ese punto. 
+Con la función st_nearest_feature() vamos a buscar el punto más cercano.
+Hagamos una prueba con los primeros 5 datos para comprender la operación.
+```{r}
+
+st_nearest_feature(radios_puntos, subte)[1:5]
+
+```
+
+Lo que devuelve es el índice de las estaciones de subte.
+En este caso, el radio 1ero en la lista corresponde a la estación de subte 42,
+el 2do radio a la estación de subte 71 y así. 
+```{r}
+
+cercanos <- subte[st_nearest_feature(radios_puntos, subte),]
+
+```
+
+¿Qué hicimos?
+Se encontró la estación de subte más cercana al centroide del radio censal.
+De esta manera, obtenemos la distancia en metros de los dos puntos señalados (el centroide del radio y el punto donde se encuentra la estación de subte)
+```{r}
+
+distancias <- st_distance(radios_puntos, cercanos, by_element = TRUE)
+
+```
+
+Ahora, convertimos ese vector de distancias en una columna de nuestro df.
+```{r}
+
+caba$distancia <- as.numeric(distancias)
+
+```
+
+Ahora podemos graficar los radios censales a partir de su distancia de una estación  de subte.
+```{r}
+
+ggplot() +
+geom_sf(data = caba, aes(fill = distancia), color = NA) +
+scale_fill_viridis_c(breaks= seq(0,6000,1000)) +
+labs(title = "Distancia a estación de subte más cercana",
+subtitle = "Ciudad Autónoma de Buenos Aires",
+fill = "Distancia a estación\nde subte más cercana")+
+theme_void()
+
+
+```
+
+¿Y si quisiéramos quedarnos con los radios censales que tienen estaciones de subte a menos de 500 mts?
+```{r}
+
+ggplot() +
+  geom_sf(data = caba)+
+  geom_sf(data = filter(caba,distancia < 501), aes(fill = distancia), color = NA) +
+  scale_fill_viridis_c() +
+  labs(title = "Radios censales a menos de 500 metros de una estación de subte",
+  subtitle = "Ciudad Autónoma de Buenos Aires",
+  fill = "Distancia a estación\nde subte más cercana")+
+  theme_void()
+
+```
+Veamos qué barrios tienen mayor cercanía a estaciones de subte.
+Cargamos los polígonos de los barrios.
+```{r}
+
+barrios <- st_read("bases_clase3/barrios_caba/barrios_wgs84.shp")
+ggplot()+
+  geom_sf(data= barrios)
+```
+
+Realizamos una intersección para obtener los radios censales que pertenecen a los distintos barrios.
+```{r}
+
+radios_barrios <- st_intersection(barrios, caba)
+
+ggplot()+
+  geom_sf(data=radios_barrios)
+  
+  
+```
+
+Calculemos ahora el promedio de la distancia de los radios censales que pertenecen a los barrios a estaciones de subte.
+```{r}
+
+radios_barrios <- as.data.frame(radios_barrios) %>% 
+  group_by(BARRIO) %>% 
+  summarise(distancia_promedio = mean(distancia))
+
+
+```
+
+Ahora realizamos el join para obtener los polígonos de los barrios.
+```{r}
+barrios <- left_join(barrios, radios_barrios, by="BARRIO")
+```
+
+Graficamos.
+```{r}
+
+ggplot()+
+  geom_sf(data = barrios, aes(fill=distancia_promedio))+
+  scale_fill_viridis_c(name= "Distancia promedio a\nestaciones de subte (metros)")
+
+```
+
+Podemos también marcar el barrio que tiene el promedio de mayor cercanía y el que tiene la mayor lejanía.
+```{r}
+
+ggplot()+
+  geom_sf(data = barrios, aes(fill=distancia_promedio))+
+  geom_sf(data = filter(barrios, BARRIO == "SAN NICOLAS"), fill="orange")+
+  geom_sf(data = filter(barrios, BARRIO == "VILLA REAL"), fill="red")+
+  scale_fill_viridis_c(name= "Distancia promedio a\nestaciones de subte (metros)")
+
+```
+
+

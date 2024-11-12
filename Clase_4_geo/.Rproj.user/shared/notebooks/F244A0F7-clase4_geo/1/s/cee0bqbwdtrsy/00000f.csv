@@ -1,0 +1,42 @@
+"0","library(tmaptools)"
+"0","library(RUMBA)"
+"0","library(tidyverse)"
+"0","library(sf)"
+"0","library(ggmap)"
+"2","[32mℹ[39m Google's Terms of Service: [34m[3m]8;;https://mapsplatform.google.com<https://mapsplatform.google.com>]8;;[23m[39m
+  Stadia Maps' Terms of Service: [34m[3m]8;;https://stadiamaps.com/terms-of-service/<https://stadiamaps.com/terms-of-service/>]8;;[23m[39m
+  OpenStreetMap's Tile Usage Policy: [34m[3m]8;;https://operations.osmfoundation.org/policies/tiles/<https://operations.osmfoundation.org/policies/tiles/>]8;;[23m[39m
+[32mℹ[39m Please cite [34mggmap[39m if you use it! Use `citation(""ggmap"")` for details."
+"2","
+Attaching package: ‘ggmap’
+
+"
+"2","The following object is masked from ‘package:ggimage’:
+
+    theme_nothing
+
+"
+"0","library(osmdata)"
+"0","library(nominatimlite)"
+"0","library(arcgeocoder)"
+"0","library(htmltools)"
+"0","library(ggimage)"
+"0","library(ggsn)"
+"2","Loading required package: grid
+"
+"0","library(leaflet)"
+"0","library(tmaptools)"
+"0","library(viridisLite)"
+"0","library(osrm)"
+"2","Data: (c) OpenStreetMap contributors, ODbL 1.0 - http://www.openstreetmap.org/copyright
+"
+"2","Routing: OSRM - http://project-osrm.org/
+"
+"2","sp support will be dropped in the next major release, please use sf objects instead.
+"
+"0","library(units)"
+"0","#install_github(""wch/webshot"")"
+"0","library(htmlwidgets)"
+"0","library(webshot)"
+"0","#install.packages(""nominatimlite"")"
+"0",""

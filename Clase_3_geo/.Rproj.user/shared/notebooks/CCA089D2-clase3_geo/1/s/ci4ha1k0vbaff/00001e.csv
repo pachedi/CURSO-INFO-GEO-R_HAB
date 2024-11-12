@@ -1,0 +1,19 @@
+"0","leaflet() %>% 
+  addTiles() %>% 
+  setView(lng =  -58.3895861, lat=-34.6107111  , zoom = 9) %>%
+  addWMSTiles(
+    mapa_satelite,
+    layers = ""Mosaico_SACC"",
+    options = WMSTileOptions(format = ""image/png"", transparent = TRUE)
+  ) %>% 
+  addWMSTiles(
+    dengue,
+    layers = ""HAPN:RiesgoAmbiental2022"",
+    options = WMSTileOptions(format = ""image/png"", transparent = TRUE
+                             ),
+    clusterOptions =  markerClusterOptions()
+  ) 
+"
+"2","Error in addWMSTiles(., dengue, layers = ""HAPN:RiesgoAmbiental2022"", options = WMSTileOptions(format = ""image/png"",  : 
+  unused argument (clusterOptions = markerClusterOptions())
+"

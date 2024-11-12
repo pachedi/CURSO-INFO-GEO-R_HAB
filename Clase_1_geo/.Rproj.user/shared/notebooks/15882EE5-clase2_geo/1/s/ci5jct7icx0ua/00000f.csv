@@ -1,0 +1,11 @@
+"0","poblacion_bp_quilmes <- quilmes %>% 
+  filter(link %in% radios_bp_quilmes$link)
+"
+"1","[1m[33mError[39m in `filter()`:[22m
+[38;5;252m[36mℹ[38;5;252m In argument: `link %in% radios_bp_quilmes$link`.[39m
+[1mCaused by error in `radios_bp_quilmes$link`:[22m
+[33m![39m $ operator is invalid for atomic vectors
+Backtrace:
+[90m  1. [39mquilmes %>% filter(link %in% radios_bp_quilmes$link)
+[90m 10. [39mlink %in% radios_bp_quilmes$link
+"

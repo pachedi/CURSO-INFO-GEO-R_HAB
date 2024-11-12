@@ -1,0 +1,16 @@
+"0","ggplot() +
+  geom_sf(data = quilmes)+
+  geom_sf(data = Quilmes_calles)+
+  geom_sf(data = filter(Quilmes_calles, str_detect(name, ""Avenida"")), 
+          color = ""green"")+
+  geom_sf(data = Quilmes_rios, color = 'blue', size = 1.5)+
+  #geom_sf(data = Quilmes_hospi, color= ""yellow"")+
+  geom_image(data = Quilmes_hospi, aes(x,y, image = image), size=0.03, col=""red"")+
+  theme_void()+
+  theme(panel.border = element_rect(colour = ""black"", fill=NA, size=2))+
+  labs(title = ""Partido de Quilmes"",
+       subtitle = ""Provincia de Buenos Aires"",
+       caption = ""Fuente: Open Street Map"")
+"
+"2","Warning: The `size` argument of `element_rect()` is deprecated as of ggplot2 3.4.0.
+Please use the `linewidth` argument instead."

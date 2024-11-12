@@ -1,0 +1,22 @@
+"0","for(i in microcentro){
+  
+  barrio <- barrios %>% 
+    filter(BARRIO == i)
+  
+  barrio_calles <- opq(barrio) %>% 
+  add_osm_feature(key = ""highway"") %>% 
+  osmdata_sf()
+  
+  barrio_calles <- st_intersection(barrio_calles$osm_lines, barrio)
+  
+  nombre <- gsub("" "", """", i)
+  
+  assign( paste0(nombre, ""_calle""), barrio_calles ,envir= globalenv())
+
+}
+"
+"2","Warning: attribute variables are assumed to be spatially constant throughout all geometries"
+"2","Warning: attribute variables are assumed to be spatially constant throughout all geometries"
+"2","Warning: attribute variables are assumed to be spatially constant throughout all geometries"
+"2","Warning: attribute variables are assumed to be spatially constant throughout all geometries"
+"2","Warning: attribute variables are assumed to be spatially constant throughout all geometries"

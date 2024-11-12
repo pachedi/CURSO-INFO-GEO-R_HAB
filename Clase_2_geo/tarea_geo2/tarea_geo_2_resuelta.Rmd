@@ -1,0 +1,150 @@
+---
+title: "Clase 2 - TAREA GEO"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    #number_sections: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## 1-Cargar las secciones censales y los datos censales
+
+Cargar librerías
+```{r}
+
+library(sf)
+library(tidyverse)
+library(ggrepel)
+library(units)
+library(openxlsx)
+library(ggspatial)
+```
+
+
+```{r}
+
+secciones <- st_read("Seccionado_2021/SECC_CE_20210101_2.shp")
+
+
+```
+
+## 2-Filtrar las secciones censales de Coruña (CPRO 15) y visualizar el mapa
+```{r}
+
+coruna <- secciones %>% 
+  filter(CPRO == "15")
+
+ggplot()+
+  geom_sf(data=coruna)
+
+
+```
+
+
+## 3-Filtrar por las secciones de Coruña
+
+```{r}
+
+
+secciones_edad <- read.csv("secciones_censales_coruna.csv",sep=";")
+
+secciones_edad <- secciones_edad %>% 
+  rename(CUSEC = 1,
+         lugar = 3)
+
+secciones_coruna <- unique(coruna$CUSEC)
+
+secciones_censales_coruna <- secciones_edad %>% 
+  filter(CUSEC %in% secciones_coruna)
+
+
+```
+
+## 4-Filtrar por la categoría Total en la variable "Lugar de naciminento" y "Ambos sexos"
+```{r}
+
+secciones_censales_coruna <- secciones_censales_coruna %>% 
+  filter(lugar == "Total" & Sexo == "Ambos sexos")
+
+```
+
+## 5-Realizar un join con las secciones censales y crear un mapa coloreado por cantidad de poblacion
+```{r}
+
+secciones_censales_coruna$Total <- gsub("\\.", "", secciones_censales_coruna$Total)
+
+para_mapear <- left_join(coruna, secciones_censales_coruna) %>% 
+  mutate(Total = as.numeric(Total))
+
+ggplot(data= para_mapear)+
+  annotation_map_tile(type = "osm", zoom = 12) +
+  geom_sf(aes(fill=Total),col=NA)+
+  scale_fill_viridis_c()+
+  theme_minimal()+
+  labs(title = "Cantidad de población por sección censal",
+       subtitle = "Coruña, España",
+       caption = "Elaboración propia en base a datos Censales (2021)")
+
+
+
+```
+
+
+## 6-Cargar los datos censale por Municipio y generar una pirámide poblacional para Coruña (código 15)
+```{r}
+
+
+piramide <- read.csv("piramide_espana.csv", sep = ";")
+
+coruna <- piramide %>% 
+  filter(startsWith(Provincias, "15"))
+
+
+coruna_total <- coruna %>% 
+  rename(Edad = 6) %>% 
+  filter(Secciones == "" & Municipios == "" & Sexo != "Ambos sexos" & Edad != "Total")
+
+coruna_total$Total <- gsub("\\.", "", coruna_total$Total)
+
+coruna_total <- coruna_total %>% 
+  mutate(Total = as.numeric(Total))
+
+
+```
+
+
+```{r}
+
+grupos_b = unique(coruna_total$Edad)
+
+coruna_total$Edad <- factor(coruna_total$Edad, levels = grupos_b, ordered = TRUE)
+
+ggplot(coruna_total, aes(x = Edad, color=Sexo, fill=Sexo,
+                y = ifelse(test = Sexo == "Hombre",
+                           yes = -Total, no = Total))) + 
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = abs, limits = max(coruna_total$Total) * c(-1,1),
+                     breaks = seq(-50000,50000,10000)) +
+  scale_x_discrete(breaks = coruna_total$Edad)+
+  labs(x="Edad", y = "Cantidad",
+       title = "Pirámide poblacional de Coruña",
+       subtitle = "España",
+       caption= "Fuente: Elaboración propia en base a datos\ndel Censo 2021")+
+  scale_color_manual(name= "Género",
+                     values= c("Mujer" = "red",
+                               "Hombre" = "blue"))+
+  scale_fill_manual(name= "Género",values= c("Mujer" = "red",
+                              "Hombre" = "blue"))+
+  theme_minimal()+
+  coord_flip()
+
+
+
+```

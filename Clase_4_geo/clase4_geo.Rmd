@@ -1,0 +1,945 @@
+---
+title: "Clase 4 - R GEO"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    #number_sections: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r warning=FALSE}
+library(tmaptools)
+library(RUMBA)
+library(tidyverse)
+library(sf)
+library(ggmap)
+library(osmdata)
+library(nominatimlite)
+library(arcgeocoder)
+library(htmltools)
+library(ggimage)
+library(ggsn)
+library(leaflet)
+library(tmaptools)
+library(viridisLite)
+library(osrm)
+library(units)
+library(htmlwidgets)
+library(webshot)
+#install_github("wch/webshot")
+#install.packages("nominatimlite")
+#remotes::install_github("dkahle/ggmap")
+```
+
+## MAPAS CON OPEN STREET MAP
+
+[OpenStreetMap](https://www.openstreetmap.org/) es una plataforma colaborativa para crear mapas editables y libres. Es algo así como una "wikipedia" de los mapas. 
+Según wikipedia:
+"Los usuarios registrados pueden subir sus trazas desde el GPS y crear y corregir datos vectoriales mediante herramientas de edición creadas por la comunidad OpenStreetMap. Cada semana se añaden 90.000 km de nuevas carreteras con un total de casi 24.000.000 km de viales (febrero de 2011), eso sin contar otros tipos de datos (pistas, caminos, puntos de interés, etc.)"
+
+Open street maps provee muchísima información, no solamente de polígonos de ciudades sino también de infraestructura hospitalaria, escolar, etc.
+Leaflet es el paquete de R que nos permitirá también realizar mapas interactivos.
+
+En primer lugar obtenemos el polígono de una ciudad que nos interese.
+En este caso solicitamos el Partido de Quilmes.
+```{r}
+#https://wiki.openstreetmap.org/wiki/Map_features
+
+quilmes <- nominatimlite::geo_lite_sf(address = "Partido de Quilmes,Buenos aires, Argentina", points_only = FALSE)
+
+```
+
+
+Así, rápidamente obtenemos el polígono del Partido de Quilmes. Luego con la función addTiles, agregamos la capa del mapa OSM y finalmente el Polígono del objeto.
+Para graficar, utilizamos leaflet
+Podemos graficar en OSM con leaflet:
+```{r}
+leaflet(quilmes) %>% 
+  addTiles() %>% 
+  addPolygons()
+
+```
+
+OSM provee [features](https://wiki.openstreetmap.org/wiki/Map_features), es decir una gran cantidad de elementos que le podemos solicitar con la función add_osm_feature()
+En este caso podemos pasar el polígono de Quilmes y solicitar las calles en formato simple feature (sf). En la función opq() indicamos el polígono que nos interesa y con add_osm_feature() le indicamos la "key" es decir, la palabra clave que estamos buscando (ver link features). Luego con osmdata_sf() pedimos que sea en formato sf.
+```{r}
+
+#?opq
+#?osmdata_sf
+
+Quilmes_calles <- opq(quilmes) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+```
+
+
+
+Si bien obtuvimos respuesta de las lineas que configuran las calles de Quilmes, aún no tenemos el objeto en formato data frame. La respuesta es una lista.
+De todos modos, si "buceamos" en la lista, podemos encontrar las líneas que conforman las calles de Quilmes.
+¿Pero qué pasa? Tal como se puede ver, las calles empiezan y terminan por fuera de los límites del partido. Es por este motivo que para tener la información correcta, debemos realizar una intersección más precisa con la función st_intersection() utilizando el polígono que descargamos previamente.
+```{r}
+
+ggplot()+
+  geom_sf(data=quilmes, col="red")+
+  geom_sf(data=Quilmes_calles$osm_lines)
+
+```
+Ahora sí obtenemos la información que estamos necesitando.
+```{r}
+
+
+Quilmes_calles <- st_intersection(Quilmes_calles$osm_lines, quilmes)
+
+ggplot()+
+  geom_sf(data=quilmes)+
+  #geom_sf(data=Quilmes_calles$osm_polygons)+
+  geom_sf(data=Quilmes_calles)
+  #geom_sf(data=Quilmes_calles$bbox)
+
+
+
+```
+
+Podemos obtener otro tipo de información como puede ser un hospital con su respectivo "key" y "value" o arroyos.
+Luego debemos realizar la misma operación para intersectar la información. 
+```{r}
+
+#?add_osm_feature
+
+Quilmes_hospi <- opq(quilmes) %>% 
+  add_osm_feature(key = "amenity", value = "hospital") %>% 
+  osmdata_sf()
+
+Quilmes_rios<- opq(quilmes) %>% 
+  add_osm_feature(key = "waterway") %>% 
+  osmdata_sf()
+
+Quilmes_hospi <- st_intersection(Quilmes_hospi$osm_points, quilmes)
+Quilmes_rios <- st_intersection(Quilmes_rios$osm_lines, quilmes)
+```
+
+Podemos también agregar íconos pertinentes para los distintos establecimientos.
+Con un link a una imagen, podemos descargarla y utilizarla en reemplazo del punto.
+```{r}
+Quilmes_hospi = Quilmes_hospi %>% 
+  mutate(image = sample("https://www.shareicon.net/download/48x48//2016/06/19/605365_hospital_48x48.png", size=49, replace = TRUE))
+
+```
+
+Para graficar con geom_image() es necesario que tengamos un valor x e y para colocar el ícono. Replicamos los valores de las coordenadas long y lat de los hospitales.
+```{r}
+
+for(i in 1:nrow(Quilmes_hospi)){
+  Quilmes_hospi$x[i] =  Quilmes_hospi$geometry[[i]][1]
+  Quilmes_hospi$y[i] =  Quilmes_hospi$geometry[[i]][2]
+}
+
+# Otra manera de hacerlo
+Quilmes_hospi2 <- Quilmes_hospi  %>% 
+  mutate(x = map_dbl(geometry, ~(.x)[1]),
+         y = map_dbl(geometry, ~(.x)[2]))
+
+
+```
+
+Graficamos de la misma manera agregando colores para identificar los distintos elementos.
+```{r}
+
+#Quilmes_hospi = Quilmes_hospi %>% 
+#  mutate(image = sample("https://www.shareicon.net/download/128x128//2015/11#/01/665295_medical_512x512.png", size=49, replace = TRUE))
+
+ggplot() +
+  geom_sf(data = quilmes)+
+  geom_sf(data = Quilmes_calles)+
+  geom_sf(data = filter(Quilmes_calles, str_detect(name, "Avenida")), 
+          color = "green")+
+  geom_sf(data = Quilmes_rios, color = 'blue', size = 1.5)+
+  #geom_sf(data = Quilmes_hospi, color= "yellow")+
+  geom_image(data = Quilmes_hospi, aes(x,y, image = image), size=0.03, col="red")+
+  theme_void()+
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+  labs(title = "Partido de Quilmes",
+       subtitle = "Provincia de Buenos Aires",
+       caption = "Fuente: Open Street Map")
+
+
+```
+
+## Mapas interactivos
+
+[Stamen](https://stamen.com/open-source/) es el proveedor de mapas de donde podemos descargar una enorme variedad de capas de todo el mundo
+Para hacerlo, se requiere [registrarse](https://client.stadiamaps.com/signup/?utm_content=top_nav_signup&utm_source=marketing_site/) y obtener un API key. Al obtener esa API key, noslogueamos en Rstudio con ggmap::register_stadiamaps("XXXXXXXXXXXXXXXXXXX") y ya estamos habilitados para descargar mapas.
+Probemos con la CABA.
+
+
+
+```{r include=FALSE}
+
+ggmap::register_stadiamaps("88fdf6f8-ac46-4028-88ac-23b4e66fffcf")
+
+```
+
+En primer lugar, obtenemos el polígono de la CABA.
+```{r}
+
+caba_bb <- nominatimlite::geo_lite_sf(address = "ciudad autonoma de Buenos Aires, Argentina", points_only = FALSE)
+
+```
+
+Lo confirmamos con leaflet.
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  addPolygons(data=caba_bb) %>% 
+  addMiniMap()
+
+```
+
+En segundo lugar, obtenemos el bb (bounding box) que son los límites del polígono (xmin, ymin , xmax, ymax) con la función st_bbox()
+```{r}
+
+caba_bb <- st_bbox(caba_bb)
+
+caba_bb
+```
+
+Si nos fijamos, el objeto es un vector nombrado "Named num". Eso nos trae problemas ya que los parámetros para obtener el mapa son los números del bbox y si le pasamos el bbox nombrado nos va a tirar error. Por eso debemos "desnombrarlo"
+```{r}
+
+#?get_stadiamap
+
+class(caba_bb)
+
+caba_bb <- unname(caba_bb)
+
+
+
+```
+
+Ahora sí, utilizamos la función get_stadiamap() y le indicamos el bbox, el tipo de mapa que queremos y el zoom.
+```{r}
+
+cabaterra <- get_stadiamap(bbox = caba_bb, 
+                          maptype = "stamen_terrain", 
+                          zoom=12)
+
+```
+Con ggmap() visualizamos.
+```{r}
+ggmap(cabaterra)
+
+```
+
+Es posible graficar con una gran cantidad de capas.
+```{r}
+
+capas <- c("stamen_terrain", "stamen_toner", "stamen_toner_lite", "stamen_watercolor", "alidade_smooth", "alidade_smooth_dark", "outdoors", "stamen_terrain_background", "stamen_toner_background", "stamen_terrain_labels", "stamen_terrain_lines", "stamen_toner_labels", "stamen_toner_lines")
+
+cabaterra <- get_stadiamap(bbox = caba_bb, 
+                          maptype = "outdoors", 
+                          zoom=12)
+
+ggmap(cabaterra)
+  
+```
+
+Podemos agregarle capas al igual que veníamos haciendo con geom_sf()
+Cargamos la base e indicamos la columna que contiene la información geográfica.
+```{r}
+
+hospi <- st_read("base_clase_4/hospitales-con-maternidades.csv")
+
+hospi <- hospi %>% 
+  st_as_sf(wkt = "WKT")
+
+```
+
+Graficamos.
+```{r}
+
+ggmap(cabaterra)+
+  geom_sf(data= hospi,inherit.aes=FALSE, col="red")
+
+```
+
+## Mapas interactivos.
+
+Leaflet es el paquete que nos va a permitir realizar mapas interactivos conectando con OSM.
+```{r}
+
+leaflet() %>% 
+  addTiles()
+
+```
+
+Podemos darle un punto de inicio (en este caso el obelisco)
+```{r}
+
+leaflet() %>% 
+  setView(lng = -58.3841453, lat =  -34.6037345, zoom= 12) %>% 
+  addTiles()
+
+```
+
+Podemos también agregar polígonos de una capa geográfica.
+Carguemos una base con los barrios de CABA.
+
+```{r}
+
+barrios <- st_read("base_clase_4/barrios_caba/barrios_wgs84.shp")
+
+```
+Ahora, cargamos la capa encima de la capa de open street maps
+```{r}
+
+leaflet() %>% 
+  setView(lng = -58.3841453, lat =  -34.6037345, zoom= 11) %>% 
+  addTiles() %>% 
+  addPolygons(data=barrios)
+
+```
+
+
+Podemos además colorear los polígonos según una variable presente. En este caso el área. 
+```{r}
+#?addPolygons
+#?colorBin
+
+binpal <- colorBin("viridis", barrios$AREA, 8, pretty = FALSE)
+
+leaflet() %>% 
+  setView(lng = -58.3841453, lat =  -34.6037345, zoom= 10) %>% 
+  addTiles() %>% 
+  addPolygons(data=barrios, stroke=F, smoothFactor = 0.2, fillOpacity = .8,
+    color = ~binpal(AREA)) 
+
+```
+
+
+Es posible también agregar una leyenda al lado del mapa que indique mayor información.
+```{r}
+
+leaflet() %>% 
+  setView(lng = -58.3841453, lat =  -34.6037345, zoom= 10) %>% 
+  addTiles() %>% 
+  addPolygons(data=barrios, stroke=FALSE, smoothFactor = 0.2, fillOpacity = .8,
+    color = ~binpal(AREA)) %>% 
+  addLegend(pal = binpal, values = barrios$AREA, opacity = 0.7, title = "Area por barrio",
+  position = "topright") %>% 
+  addProviderTiles(providers$OpenStreetMap)
+
+
+```
+
+## Trabajar con API y mapas interactivos
+
+Ahora vamos a combinar los mapas interactivos de open street maps con una API llamada open route service.
+install.packages("remotes")
+remotes::install_github("GIScience/openrouteservice-r")
+
+Requiere deschequear la siguiente opción:
+Tools --> global options --> Packages --> unchek "Use internet explorer library/proxy for http
+
+
+En primer lugar, cargamos la librería:
+```{r warning=F}
+
+library(openrouteservice)    
+library(httr) 
+library(leaflet)
+library(tidyverse)
+```
+
+Debemos setear el host y configurar las opciones que nos da la API.
+Es importante revisar la [documentacion](https://openrouteservice.org/dev/#/api-docs/)
+```{r}
+
+#options(openrouteservice.url = "http://localhost:8080/ors")
+
+#set_config(use_proxy(url="10.3.100.207",port=8080))
+
+# options(openrouteservice.paths = list(directions = "v2/directions",
+#                                         isochrones = "v2/isochrones",
+#                                         matrix = "v2/matrix",
+#                                         geocode = "geocode",
+#                                         pois = "pois",
+#                                         elevation = "elevation",
+#                                         optimization = "optimization"))
+
+
+```
+
+Seteamos nuestra key value
+```{r, include=FALSE}
+
+ors_api_key("5b3ce3597851110001cf62482569a3c36df84e6cab6cefb4f4925f82")
+
+```
+
+¿Qué acciones podemos realizar con esta API?
+Uno de los servicios que provee es la geocodificación.
+Podemos darle instrucciones con el nombre del lugar que queremos obtener y devolverá los puntos georreferenciados.
+Probamos con Santa Fe
+Vemos que existe varios puntos en el mundo con el mismo nombre.
+```{r}
+
+santa_fe <- ors_geocode("Santa Fe")
+
+leaflet() %>%
+  addTiles() %>%
+  addGeoJSON(santa_fe) %>%
+  fitBBox(santa_fe$bbox)
+```
+
+Podemos limitar los resultados por los límites de un país.
+```{r}
+
+#?ors_geocode
+santa_fe <- ors_geocode("Santa Fe", boundary.country = "AR")
+
+leaflet() %>%
+  addTiles() %>%
+  addGeoJSON(santa_fe) %>%
+  fitBBox(santa_fe$bbox)
+
+
+```
+
+## Ruteo
+
+Otro de los servicios que ofrece es devolver el ruteo de un punto al otro.
+Por ejemplo, podemos probar desde el Obelisco hasta Rosario.
+Primero buscamos el Obelisco y verificamos en el mapa que el punto es el correcto.
+```{r}
+
+obelisco <- ors_geocode("obelisco", boundary.country = "AR", size=1)
+
+leaflet() %>%
+  addTiles() %>%
+  addGeoJSON(obelisco) %>%
+  fitBBox(obelisco$bbox)
+
+
+salida <- obelisco$features[[1]]$geometry$coordinates
+
+
+```
+
+Luego, buscamos las coordenadas del obelisco en nuestro objeto y lo guardamos
+```{r}
+
+obelisco$features[[1]]$geometry$coordinates
+
+salida <- obelisco$features[[1]]$geometry$coordinates
+
+```
+
+Realizamos la misma operación con Rosario para obtener el punto de llegada. 
+```{r}
+
+rosario <- ors_geocode("rosario", boundary.country = "AR", size=1)
+
+leaflet() %>%
+  addTiles() %>%
+  addGeoJSON(rosario) %>%
+  fitBBox(rosario$bbox)
+
+
+```
+
+Guardamos el punto de llegada.
+```{r}
+
+llegada <- rosario$features[[1]]$geometry$coordinates
+
+```
+
+
+Generamos entonces la ruta a partir de dos puntos señalados.
+Primero se crean las coordenadas de salida y llegada como lista.
+Luego se crea la ruta con la función ors_directions()
+```{r}
+
+coordenadas <- list(salida, llegada)
+
+
+ruta <- ors_directions(coordenadas)
+
+
+```
+
+
+Visualizamos la ruta generada con leaflet.
+```{r}
+
+leaflet() %>%
+  addTiles() %>%
+  addGeoJSON(ruta, fill=FALSE) %>%
+  fitBBox(ruta$bbox)
+
+```
+
+
+```{r}
+```
+
+
+
+ORS permite también obtener datos cercanos de Open Street Maps. En este caso por ejemplo podemos pedir que devuelva puntos cercanos al que proveemos en primera instancia. 
+Pongamos entonces el dato del Obelisco para ver qué respuesta nos devuelve.
+```{r}
+
+  #coordinates <- list(point.lon="-58.381577",point.lat="-34.603755")
+  
+  y = ors_geocode(location = salida,
+                  format = "geojson")
+
+```
+
+
+Visualizamos los puntos con leaflet.
+```{r}
+
+  leaflet() %>%
+    addTiles() %>%
+    addGeoJSON(y) %>%
+    fitBBox(y$bbox)
+```
+
+¿Cómo podemos acceder a la información de esos puntos obtenidos?
+```{r}
+
+coordenadas_x <- c()
+coordenadas_y <- c()
+etiqueta <- c()
+pais <- c()
+ciudad <- c()
+comuna <- c()
+barrio <- c()
+  
+  for(i in 1:length(y$features)){
+    
+    # coordenadas  
+ coordenadas_x <- append(coordenadas_x,y$features[[i]]$geometry$coordinates[1])
+    
+ 
+ coordenadas_y <- append(coordenadas_y,y$features[[i]]$geometry$coordinates[2])
+ 
+    #nombre
+  etiqueta <- append(etiqueta,  y$features[[i]]$properties$label)
+    
+    #pais
+    pais <- append(pais,y$features[[i]]$properties$country)
+    
+    # ciudad
+    
+  ciudad <- append(ciudad,  y$features[[i]]$properties$region)
+    
+    # barrio
+    
+    barrio <- append(barrio,y$features[[i]]$properties$neighbourhood)
+    
+    #comuna 
+    
+   comuna <- append(comuna, y$features[[i]]$properties$borough)
+    
+    
+  }
+
+
+```
+
+
+Al obtener los vectores de cada uno de los elementos, lo convertirmos en un dataframe.
+```{r}
+
+resultado <- data.frame(coordenadas_x, coordenadas_y,
+                        etiqueta, pais,comuna, barrio, ciudad)
+
+```
+
+Convertimos el df en sf para poder georreferenciar la información.
+```{r}
+
+resultado_sf <- st_as_sf(resultado,
+                         coords = c("coordenadas_x", "coordenadas_y"),
+                         crs = 4326)
+
+```
+
+
+```{r}
+
+leaflet(resultado) %>%
+  addTiles() %>%
+  addMarkers(~coordenadas_x, ~coordenadas_y,
+             popup = ~htmlEscape(etiqueta)) %>% 
+  fitBBox(y$bbox)
+
+
+```
+
+
+Guardamos la base como shape file.
+```{r}
+
+carpeta <- "./obelisco"
+
+if (file.exists(carpeta)){
+    
+} else {
+    dir.create(file.path(carpeta))
+    
+}
+
+st_write(resultado_sf, "./obelisco/obelisco.shp", crs=4326)
+
+```
+
+Si quisiéramos calcular la distancia entre los puntos podemos realizarlo con la función st_distance().
+En primer lugar, creamos un data frame con los datos de salida y de llegada.
+```{r}
+
+
+ciudades <- data.frame(name = c("caba", "rosario"),
+                     x = c(salida[1], llegada[1]),
+                     y = c(salida[2], llegada[2])) %>% 
+  st_as_sf(coords = c("x", "y"), crs = 4326)
+
+
+```
+
+Luego calculamos la distancia con st_distance()
+```{r}
+
+distancia <- st_distance(ciudades)
+
+distancia
+```
+
+Tal como podemos ver, el df no tiene nombres y la unidad es en metros. Al ser una distancia tan grande, conviene convertirla en kms.
+Primero transformamos la distancia en kms con units()
+```{r}
+
+units(distancia) <- make_units(km)
+
+```
+
+Finalmente, agregamos los nombress de las ciudades.
+```{r}
+
+colnames(distancia) <- ciudades$name
+rownames(distancia) <- ciudades$name 
+
+distancia
+
+```
+
+## Geocodificación
+
+Esta operación nos permite obtener el punto de latitud y longitud de lugares a partir de su dirección.
+Creemos un data frame con direcciones.
+```{r}
+
+direcciones <- tribble(
+  ~nombre,                  ~direccion,
+  "Casa Rosada",          "Balcarce 78, Montserrat, Ciudad autonoma de buenos aires, 1064",
+  "Congreso de la Nación", "Entre Rios and Rivadavia, Balvanera, Ciudad autonoma de buenos aires, 1033",
+  "Tribunales",         "Talcahuano 624, San Nicolas, Ciudad autonoma de buenos aires, 1013"
+)
+
+
+```
+
+Luego de haber dado las direcciones, le pedimos la latitud y longitud con la función arc_geo(). Eso nos devuelve un data frame con la información requerida.
+```{r}
+
+
+puntos_direcciones <- arc_geo(direcciones$direccion, lat = "latitude", long = "longitude")
+
+```
+
+Graficamos con leaflet indicando la latitud y longitud.
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  addMarkers(data = puntos_direcciones, 
+             lng = ~longitude, lat = ~latitude)
+
+
+```
+## Reverse geocoding
+
+Supongamos ahora que tenemos la situación inversa. Tenemos las referencias de geolocalización pero no tenemos las direcciones. 
+Existe la función arc_reverse_geo() para resolver ese problema.
+```{r}
+
+reverse <- arc_reverse_geo(
+  x = puntos_direcciones$longitude,
+  y = puntos_direcciones$latitude,
+  address = "direccion_encontrada"
+)
+
+```
+Graficamos los resultados de reverse geocoding.
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  addMarkers(data = reverse, 
+             lng = ~x, lat = ~y)
+
+```
+
+También podemos buscar lugares específicos tipeando su nombre e indicando ciudad y país.
+```{r}
+
+#?arc_geo_multi
+
+casa_rosada <- arc_geo_multi(
+  address = "Casa Rosada",
+  city = "Buenos Aires",
+  countrycode = "AR",
+  langcode = "ES",
+  custom_query = list(outFields = "LongLabel")
+)
+
+
+
+```
+
+
+El resultado es un data frame con las coordenadas del lugar y la dirección.
+```{r}
+
+casa_rosada %>% 
+  select(lat,lon, LongLabel)
+
+```
+
+Visualizamos en leaflet.
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  addMarkers(data = casa_rosada, 
+             lng = ~lon, lat = ~lat)
+
+
+```
+
+¿Si buscamos entretenimiento por esa zona?
+Con la función data() podemos buscar las categorías disponibles para buscar con arc geo coder. En este caso buscamos "Arte y entretenimiento".
+Lo que hacemos en este caso es pasar las coordenadas del lugar donde queremos encontrar lugares de arte y entretenimiento cercanos. Se puede también poner un límite de resultados (50 es el máximo).
+```{r}
+
+#?arc_geo_categories
+data("arc_categories")
+
+casa_rosada_arte <- arc_geo_categories("Arts and entertainment",
+  x = casa_rosada$lon,
+  y = casa_rosada$lat,
+  limit = 50, # cantidad de resultados
+  full_results = TRUE
+)
+
+
+```
+
+Graficamos.
+```{r}
+
+leaflet() %>% 
+  addTiles() %>% 
+  addMarkers(data = casa_rosada_arte, 
+             lng = ~lon, lat = ~lat,
+             popup = ~htmlEscape(Match_addr))
+
+```
+Si quisiéramos guardar en formato html o como imagen lo que graficamos debemos guardar el gráfico como objeto.
+```{r}
+
+mapa <- leaflet() %>% 
+  addTiles() %>% 
+  addMarkers(data = casa_rosada_arte, 
+             lng = ~lon, lat = ~lat,
+             popup = ~htmlEscape(Match_addr))
+
+
+```
+
+Para guardarlo en formato html utilizamos la funcion saveWidget()
+```{r}
+
+saveWidget(mapa, "mapa_arte.html", selfcontained = FALSE)
+
+```
+
+Para guardarlo como imagen utilizamos el mismo objeto en html y lo guardamos como .png
+```{r}
+
+webshot("mapa_arte.html", file = "mapa_arte.png",
+        cliprect = "viewport")
+
+```
+
+
+Si quisiéramos graficar con ggplot() deberíamos convertir el df en un objeto sf y agregar sistema de coordenadas de referencia. 
+```{r}
+
+casa_rosada_arte <- st_as_sf(casa_rosada_arte,
+  coords = c("lon", "lat"),
+  crs = 4326
+)
+
+```
+
+Si graficamos, no tenemos mucha información más que puntos en un plano. Podemos agregar contexto a la información descargando los barrios que necesitamos como vimos previamente.
+```{r}
+
+ggplot()+
+  geom_sf(data=casa_rosada_arte, aes(col= Type))
+
+
+```
+
+
+```{r}
+
+sannic <- nominatimlite::geo_lite_sf(address = "San Nicolas, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+
+pmad <- nominatimlite::geo_lite_sf(address = "Puerto Madero, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+
+santelmo <- nominatimlite::geo_lite_sf(address = "San Telmo, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+
+monserrat <- nominatimlite::geo_lite_sf(address = "retiro, Comuna 1, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+
+comuna1 <- nominatimlite::geo_lite_sf(address = "Comuna 1, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+
+monserrat <- filter(barrios, BARRIO == "MONSERRAT")
+
+sannics_calles <- opq(sannic) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+pmad_calles <- opq(pmad) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+santelmo_calles <- opq(santelmo) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+monserrat_calles <- opq(monserrat) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+comuna1_calles <- opq(comuna1) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+sannics_calles <- st_intersection(sannics_calles$osm_lines, sannic)
+
+pmad_calles <- st_intersection(pmad_calles$osm_lines, pmad)
+
+santelmo_calles <- st_intersection(santelmo_calles$osm_lines, santelmo)
+
+monserrat_calles <-st_intersection(monserrat_calles$osm_lines, monserrat)
+
+comuna1_calles <-st_intersection(comuna1_calles$osm_lines, comuna1)
+
+ggplot()+
+  #geom_sf(data = sannics_calles)+
+  #geom_sf(data = santelmo_calles)+
+  #geom_sf(data = pmad_calles)+
+  #geom_sf(data = monserrat_calles)+
+  geom_sf(data = comuna1_calles)+
+  geom_sf(data=casa_rosada_arte, aes(col= Type))+
+  labs(title= "Arte y entretenimiento en el microcentro",
+       subtitle= "CABA, Argentina",
+       caption= "Fuente: Open Street maps")+
+  scale_color_discrete(name = c("Tipo de entretenimiento"))+
+  theme_void()
+
+```
+```{r}
+
+ggplot()+
+  geom_sf(data = comuna1_calles)+
+  geom_sf(data = pmad_calles)+
+  geom_sf(data = sannics_calles)+
+  geom_sf(data=casa_rosada_arte, aes(col= Type))+
+  labs(title= "Arte y entretenimiento en el microcentro",
+       subtitle= "CABA, Argentina",
+       caption= "Fuente: Open Street maps")+
+  scale_color_discrete(name = c("Tipo de entretenimiento"))+
+  theme_void()
+```
+
+Primero cargamos la base que contiene los polígonos de los barrios.
+```{r}
+
+barrios <- st_read("base_clase_4/barrios_caba/barrios_wgs84.shp")
+
+```
+
+Luego, creamos un vector que contenga los nombres de los barrios que queremos.
+```{r}
+
+microcentro <- c("SAN NICOLAS", "SAN TELMO", "MONSERRAT",
+                 "PUERTO MADERO", "RETIRO")
+
+```
+
+Como ya conocemos el procedimiento para descargar las calles, podemos crear un ciclo definido para que realice la misma tarea para cada barrio.
+```{r}
+
+for(i in microcentro){
+  
+  barrio <- barrios %>% 
+    filter(BARRIO == i) # filtra por barrio
+  
+  barrio_calles <- opq(barrio) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf() # descarga las calles
+  
+  barrio_calles <- st_intersection(barrio_calles$osm_lines, barrio) 
+  # intersecta por barrio
+  nombre <- gsub(" ", "", i) # elimina los espacios ej: sannicolas
+  
+  assign( paste0(nombre, "_calle"), barrio_calles ,envir= globalenv())
+  # crea el objeto en el ambiente global.
+}
+
+
+
+```
+
+Graficamos.
+```{r}
+
+ggplot()+
+  geom_sf(data = SANNICOLAS_calle)+
+  geom_sf(data =  SANTELMO_calle)+
+  geom_sf(data = MONSERRAT_calle)+
+  geom_sf(data = PUERTOMADERO_calle)+
+  geom_sf(data = RETIRO_calle)+ 
+  geom_sf(data=casa_rosada_arte, aes(col= Type))+
+  labs(title= "Arte y entretenimiento en el microcentro",
+       subtitle= "CABA, Argentina",
+       caption= "Fuente: Open Street maps")+
+  scale_color_discrete(name = c("Tipo de entretenimiento"))+
+  theme_void()
+
+```
+

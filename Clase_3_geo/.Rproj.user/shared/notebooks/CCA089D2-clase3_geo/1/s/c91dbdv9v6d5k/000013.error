@@ -1,0 +1,1 @@
+{"frames":[{"func":"Sys.sleep(30)","file":"","line_number":0,"end_line_number":0,"character_number":0,"end_character_number":0}],"message":"Error in base::try(subte, silent = TRUE) : object 'subte' not found\n"}

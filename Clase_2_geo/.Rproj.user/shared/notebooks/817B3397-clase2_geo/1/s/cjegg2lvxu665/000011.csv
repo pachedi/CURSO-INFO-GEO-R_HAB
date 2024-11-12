@@ -1,0 +1,15 @@
+"0","datos_elevacion <- get_elev_raster(location = partido_quilmes, z= 9 , clip=""locations"")
+"
+"2",""
+"2"," Accessing raster elevation [-------------------------]   0%"
+"2",""
+"2"," Accessing raster elevation [=========================] 100%"
+"2","
+"
+"1",""
+"2","Mosaicing & Projecting
+"
+"2","Clipping DEM to locations
+"
+"2","Note: Elevation units are in meters.
+"

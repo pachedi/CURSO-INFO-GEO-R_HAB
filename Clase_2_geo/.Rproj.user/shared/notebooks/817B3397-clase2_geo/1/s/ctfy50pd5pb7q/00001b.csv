@@ -1,0 +1,5 @@
+"0","datos_elevacion <- datos_elevacion[complete.cases(datos_elevacion), ]
+"
+"2","Error in h(simpleError(msg, call)) : 
+  error in evaluating the argument 'i' in selecting a method for function '[': invalid 'type' (S4) of argument
+"

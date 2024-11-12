@@ -1,0 +1,7 @@
+"0","sexo_edad <- sexo_edad %>% 
+  mutate(P02 = case_when(P02 == 1~ ""M"",
+                         P02 == 2~ ""F"" ) )
+"
+"2","Error in mutate(., P02 = case_when(P02 == 1 ~ ""M"", P02 == 2 ~ ""F"")) : 
+  object 'sexo_edad' not found
+"

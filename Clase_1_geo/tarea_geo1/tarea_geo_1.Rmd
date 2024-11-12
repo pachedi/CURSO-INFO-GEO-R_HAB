@@ -1,0 +1,113 @@
+---
+title: "Clase 1 - TAREA GEO"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    #number_sections: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## 1-Graficar un mapa de las comunidades autónomas de España coloreado por Comunidad autónoma.
+
+Cargar librerías
+```{r}
+
+library(sf)
+library(tidyverse)
+library(ggrepel)
+library(units)
+library(openxlsx)
+
+```
+
+
+```{r , echo=FALSE}
+
+espana <- st_read("Comunidades_autonomas/Comunidades_Autonomas_ETRS89_30N.shp")
+
+
+ggplot()+
+  geom_sf(data = espana, aes(fill=Texto))+
+  theme(legend.position = "none")
+
+
+```
+
+## 2-Agregar al mapa las etiquetas de los nombres de las comunidades.
+```{r , echo=FALSE}
+
+espana <- espana  %>% 
+  mutate(lon = map_dbl(geometry, ~st_point_on_surface(.x)[[1]]),
+         lat = map_dbl(geometry, ~st_point_on_surface(.x)[[2]]))
+
+
+```
+
+
+```{r , echo=FALSE}
+
+
+ggplot() +
+  geom_sf(data = espana, aes(fill=Texto)) +
+  geom_label_repel(data = espana, aes(x = lon, y = lat, label = Texto))+
+  labs(title = "Mapa de la España por comununidad autónoma:",
+       caption="Fuente: Elaboración propia en base a datos abiertos")+
+  theme_void()+
+  theme(legend.position = "None")
+
+```
+
+## 3- Realizar un join entre el .shp de las comunidades y la base que contiene la población. Luego, calcular la densidad poblacional excluyendo Ceuta y Melilla.
+```{r , echo=FALSE}
+
+poblacion <- read.xlsx("poblacion_2021.xlsx")
+
+espana_poblacion <- left_join(espana, poblacion, by=c("Texto"= "comunidad"))
+
+poblacion_comuna <- espana_poblacion %>% 
+  mutate(area_kms2 = as.numeric(round(set_units(st_area(espana_poblacion$geometry), km2),2)))
+
+poblacion_comuna <-poblacion_comuna %>% 
+  mutate(densidad = poblacion / area_kms2) %>% 
+  slice(1:17)
+
+print(head(poblacion_comuna))
+
+```
+
+## 4- Graficar el mapa de España mostrando la densidad poblacional.
+```{r , echo=FALSE}
+ggplot()+
+  geom_sf(data = poblacion_comuna, aes(fill = densidad))+
+  scale_fill_viridis_c(name = "Densidad poblacional\npor Comuna")+
+  labs(title = "Densidad poblacional en España",
+       subtitle = "Hab / kms2")+
+  theme_void()
+
+
+```
+
+## 5-Agregar los nombres de las Comunidades con geom_text()
+```{r , echo=FALSE}
+
+ggplot()+
+  geom_sf(data = poblacion_comuna, aes(fill = densidad))+
+  geom_text(data = poblacion_comuna, aes(x = lon, y = lat, label = Texto_Alt),
+               size=1.7, col="red")+
+  scale_fill_viridis_c(name = "Densidad poblacional\npor Comuna")+
+  labs(title = "Densidad poblacional en España",
+       subtitle = "Hab / kms2")+
+  theme_void()
+
+
+
+```
+
+

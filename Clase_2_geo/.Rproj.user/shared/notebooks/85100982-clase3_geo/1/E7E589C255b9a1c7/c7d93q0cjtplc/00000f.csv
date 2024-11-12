@@ -1,0 +1,8 @@
+"0","indec_wfs <-st_layers(""http://ideib.caib.es/pub_ideib/public/IDEIB_WFS/MapServer/WFSServer?request=GetCapabilities&service=WFS"")
+"
+"1","Cannot open data source "
+"1","http://ideib.caib.es/pub_ideib/public/IDEIB_WFS/MapServer/WFSServer?request=GetCapabilities&service=WFS"
+"1","
+"
+"2","Error: Open failed.
+"

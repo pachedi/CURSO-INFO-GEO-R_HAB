@@ -1,0 +1,5 @@
+"0",""
+"0","radios_barrios <- st_intersection(barrios, caba)"
+"0",""
+"0","ggplot()+"
+"0","  geom_sf(data=radios_barrios)"

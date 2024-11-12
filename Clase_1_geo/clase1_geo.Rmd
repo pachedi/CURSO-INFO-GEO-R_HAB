@@ -1,0 +1,588 @@
+---
+title: "Clase 1 - R GEO"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    #number_sections: true
+    theme: lumen
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## Introducción 
+
+Hoy en día la información georreferenciada es cada vez más común. Esta disponibilidad de la información implica aprender a manipularla de manera adecuada.
+En primer lugar, debemos tener en claro qué tipo de información estamos utilizando.
+Señalemos entonces en primera instancia, tres figuras básicas que para trabajar:
+-Líneas
+-Puntos
+-Polígonos
+En segundo lugar, debemos tener las herramientas adecuadas para trabajar con esa información. Iremos sumando paquetes, pero en principio activamos dos paquetes imprescindibles:
+-sf (para el trabajo con información geográfica)
+-tidyverse (para la manipulación de tablas)
+
+```{r }
+
+#install.packages("sf")
+#install.packages("tidyverserse")
+
+library(sf)
+library(tidyverse)
+library(ggrepel)
+library(units)
+```
+
+## Lectura
+
+En primer lugar debemos conocer la manera de leer un archivo con información geográfica. Cargaremos un archivo .shp (shape) con la función st_read():
+
+```{r }
+
+caba <- st_read("bases_clase_1/comunas/comunas_wgs84.shp")
+
+head(caba)
+
+```
+Tal como podemos observar, el archivo devuelve información sobre nuestro objeto geográfico.
+Tipo: Multipolígono
+Bounding box: límites de los ejes
+CRS: sistema de coordenadas de referencia
+Archivo: shape file (.shp una de las extensiones entre otras que permiten almacenar información geográfica).
+Ya podemos entonces, visualizar la información disponible en nuestro objeto.
+La información relevante del objeto remite principalmente a las distintas comunas que conforman la Ciudad autónoma de Buenos Aires y los límites de cada uno de los polígonos que conforman esas comunas.
+Pasemos entonces a la visualización de este mapa utilizando el conocido ggplot()
+con la función geom_sf()
+
+```{r}
+
+ggplot(data=caba)+
+  geom_sf()
+
+
+```
+¡Simple! Con sólo dos líneas de código, pudimos visualizar el contorno de la CABA y sus respectivas comunas.
+Agreguemos ahora un color por comuna para distinguir esas comunas.
+
+```{r}
+
+ggplot(data=caba)+
+  geom_sf(aes(fill= COMUNAS))
+
+```
+¿Qué sucedió?
+Si bien distingue las comunas, entiende el número de comuna como una variable de rango numérico. Lo adecuado sería tener una variable categórica.
+Por ese motivo, recurrimos a tidyverse para modificar esa variable:
+
+```{r}
+
+caba <- caba %>% 
+  mutate(COMUNAS = as.character(COMUNAS))
+
+ggplot(data=caba)+
+  geom_sf(aes(fill= COMUNAS))
+
+
+```
+
+Genial, sin embargo, un nuevo inconveniente se presenta. El orden de las comunas es ahora categórico y tal como podemos ver, no es el que nosotros querríamos mostrar. 
+Afortunadamente, existe una manera de ordenar esta variable, transformando el dato en tipo factor:
+
+```{r}
+
+caba <- caba %>% 
+  mutate(COMUNAS = as.factor(COMUNAS))
+
+
+ggplot(data=caba)+
+  geom_sf(aes(fill= COMUNAS))
+
+```
+
+Si quisiéramos quitar la leyenda, no tenemos más que aclararlo en el código:
+
+```{r}
+
+ggplot(data=caba)+
+  geom_sf(aes(fill= COMUNAS))+
+  theme(legend.position = "None")
+
+
+```
+
+Podemos también quitar las coordenadas geográficas y agregar un título:
+```{r}
+
+ggplot(data=caba)+
+  geom_sf(aes(fill= COMUNAS))+
+  labs(title = "Mapa de la CABA por comuna:")+
+  theme_void()+
+  theme(legend.position = "None")
+
+
+```
+
+Sigamos agregando información relevante para nuestro mapa. Una avenida importante es Av. Rivadavia (que se suele usar para dividir el norte y el sur de la ciudad).
+Para cargar objetos de información geográfica, tenemos también la chance de hacerlo directamente a través de un link. Lo haremos con el link de datos abiertos del gobierno de la ciudad:
+
+```{r}
+
+rivadavia <- st_read("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/jefatura-de-gabinete-de-ministros/calles/avenida_rivadavia.geojson")
+
+```
+Tal como podemos observar, en Geometry type se presenta el tipo "LINESTRING" es decir, una figura de línea (tiene sentido ya que es una avenida)
+Agreguemos entonces la avenida a nuestro mapa:
+
+```{r}
+
+ggplot(data=caba)+
+  geom_sf(data=rivadavia, aes(col="red"))+
+  geom_sf(aes(fill= COMUNAS))+
+  labs(title = "Mapa de la CABA por comuna:")+
+  theme_void()+
+  theme(legend.position = "None")
+
+```
+
+¿Qué pasó? El mapa se despliega, no tira error y sin embargo, la avenida no aparece.
+Es importante tener en cuenta que la información geográfica se despliega a través de capas que se superponen una sobre otra. El orden de las capas se dispone en función del orden del código. En este caso, pusimos primero la avenida y luego el polígono de la capital. Lo que sucede es que la avenida está en nuestra imagen pero no se ve porque está tapada por el polígono.
+Hagamos lo mismo entonces pero cambiando el orden de las capas:
+
+```{r}
+
+ggplot(data=caba)+
+  geom_sf(aes(fill= COMUNAS))+
+  geom_sf(data=rivadavia, col="red", lwd=1)+
+  labs(title = "Mapa de la CABA por comuna:")+
+  theme_void()+
+  theme(legend.position = "None")
+
+```
+
+¡Ahora sí! Obtenemos el mapa de la CABA dividido por la Av. Rivadavia.
+¿Qué pasa si queremos entonces etiquetar las comunas?
+Las comunas son polígonos y la etiqueta debe situarse en un punto fijo.
+Por lo tanto, deberíamos obtener un punto a partir de los polígonos.
+La forma de realizarlo es obtener el centroide del polígono y ahí situar la etiqueta.
+
+```{r}
+caba2 <- caba  %>% 
+  mutate(lon = map_dbl(geometry, ~st_point_on_surface(.x)[[1]]),
+         lat = map_dbl(geometry, ~st_point_on_surface(.x)[[2]]))
+```
+
+
+Graficamos.
+```{r}
+
+
+ggplot() +
+  geom_sf(data = caba2, aes(fill=COMUNAS)) +
+  geom_sf(data=rivadavia, col="red")+
+  geom_label_repel(data = caba2, aes(x = lon, y = lat, label = COMUNAS))+
+  labs(title = "Mapa de la CABA por comuna:",
+       caption="Elaboración propia en base a datos abiertos CABA")+
+  theme_void()+
+  theme(legend.position = "None")
+
+```
+
+Vayamos ahora a una temática específica.
+Establecimientos educativos.
+En primer lugar, cargamos la base que contiene los establecimientos educativos.
+Grafiquemos.
+```{r}
+
+escuelas <- st_read("bases_clase_1/establecimientos_educativos/establecimientos_educativos_wgs84.shp")
+
+ggplot(data=escuelas)+
+  geom_sf()
+
+```
+
+En principio, vemos que existen establecimientos educativos a prácticamente toda la ciudad.
+Agrupemos entonces por comuna y veamos si efectivamente los establecimientos escolares se distribuyen de manera equitativa.
+```{r}
+
+establecimientos_agrupados <- escuelas %>% 
+  group_by(comuna) %>% 
+  summarise(cantidad = n())
+
+establecimientos_agrupados <- establecimientos_agrupados %>% 
+  mutate(comuna = as.factor(comuna))
+
+
+
+```
+
+Realicemos un gráfico de barras que exprese la cantidad de establecimientos educativos por Comuna.
+```{r}
+
+ggplot(data = establecimientos_agrupados)+
+  geom_col(aes(x= reorder(comuna,cantidad), y= cantidad, fill= cantidad))+
+  labs(x= "Comuna", y= "Cantidad de establecimientos")+
+  scale_fill_viridis_c()+
+  coord_flip()
+
+
+```
+
+En la base que tenemos, los establecimientos no están agrupados. 
+A través de un join, podemos agregar la cantidad de establecimientos a la comuna para visualizar el mapa.
+
+```{r}
+
+establecimientos_agrupados = as.data.frame(establecimientos_agrupados) %>% 
+  select(-3)
+
+
+caba_establecimientos <- left_join(caba2, establecimientos_agrupados,
+                                   by= c("COMUNAS" = "comuna"))
+
+
+class(caba_establecimientos)
+```
+
+
+Ahora graficamos llenando color por cantidad y agregando la etiqueta.
+```{r}
+
+ggplot() +
+  geom_sf(data = caba_establecimientos, aes(fill=cantidad)) +
+  geom_sf(data=rivadavia, col="red")+
+  geom_label_repel(data = caba_establecimientos, aes(x = lon, y = lat, label = cantidad))+
+  labs(title = "Mapa de la CABA por comuna",
+       subtitle= "Cantidad de establecimientos educativos",
+       caption="Elaboración propia en base a datos abiertos CABA")+
+  scale_fill_viridis_c()+
+  theme_void()+
+  theme(legend.position = "None")
+
+
+```
+
+Trabajemos ahora con los radios censales.
+```{r}
+
+radios <- st_read("bases_clase_1/censal/informacion_censal_por_radio_2010_wgs84.shp")
+
+
+```
+
+Grafiquemos en primer lugar para visualizar los radios.
+```{r}
+
+ggplot()+
+  geom_sf(data=radios)
+
+```
+
+
+Veamos la información que nos provee esta base.
+```{r}
+
+names(radios)
+
+```
+
+
+Con esta base podemos por ejemplo cargar la cantidad de hogares con Necesidades básicas insatisfechas.
+```{r}
+
+ggplot(data = radios)+
+  geom_sf(aes(fill=H_CON_NBI))
+
+```
+
+Los radios censales son unidades geográficas relativamente pequeñas por lo que muchas líneas atraviesan  el mapa y pueden terminar resultando molestas a la visualización.
+Quitemos entonces las líneas para clarificar el mapa.
+```{r}
+
+ggplot(data = radios)+
+  geom_sf( col =NA,aes(fill=H_CON_NBI))
+
+
+```
+
+De esta manera podemos clarificar las zonas donde hay mayores niveles de hogares con necesidades básicas insatisfechas.
+Podemos mejorar la visualización agregando una escala y agregar un nombre más adecuado 
+
+```{r}
+
+ggplot(data = radios)+
+  geom_sf( col =NA,aes(fill=H_CON_NBI))+
+  scale_fill_gradient(low = "blue", high= "white",
+                      name= "Cantidad de hogares con NBI")
+
+```
+
+Una de las características de los barrios populares es que poseen altos niveles de NBI. Carguemos la base que contiene los barrios populares de la CABA y veamos si coincide con los datos que estamos presentando.
+```{r}
+
+bpop <- st_read("bases_clase_1/bpop/barrios_vulnerables.shp")
+
+ggplot(data = radios)+
+  geom_sf( col =NA,aes(fill=H_CON_NBI))+
+  geom_sf(data=bpop, fill=NA)+
+  #geom_label_repel(data = bpop, aes(x = lon, y = lat, label = NOMBRE))
+  scale_fill_gradient(low = "blue", high= "white")
+
+```
+
+Carguemos ahora las estaciones de subte:
+```{r}
+
+subte <- st_read("https://cdn.buenosaires.gob.ar/datosabiertos/datasets/sbase/subte-estaciones/estaciones-de-subte.geojson")
+
+
+```
+Graficamos las estaciones:
+```{r}
+
+ggplot()+
+  geom_sf( data = caba)+
+  geom_sf(data= subte, aes(col=LINEA) )
+```
+
+Carguemos las lineas.
+```{r}
+
+subte_lineas <- read_sf("bases_clase_1/lineas_subte.shp")
+
+```
+
+
+Graficamos nuevamente.
+```{r}
+ggplot()+
+  geom_sf( data = caba)+
+  geom_sf(data = subte_lineas, aes(col=LINEA))+
+  geom_sf(data= subte, aes(col=LINEA) )
+```
+Las líneas tienen sin embargo un color específico.
+Cambiemos al color que corresponde.
+```{r}
+
+ggplot()+
+  geom_sf(data = caba)+
+  geom_sf(data= subte, aes(col=LINEA) )+
+  geom_sf(data= subte_lineas, aes(col=LINEA))+
+  scale_color_manual(name = "Líneas", 
+                     values = c("A" = "lightblue",
+                               "B" = "red",
+                               "C" = "blue",
+                               "D" = "green",
+                               "E" = "violet",
+                               "H" = "yellow"))+
+  labs(title= "Lineas de subte", subtitle = "CABA, Argentina")+
+  theme_void()
+
+
+```
+
+
+
+## Densidad poblacional
+Si quisiéramos calcular la densidad poblacional por comuna debemos en primer lugar cargar la base que contiene la población por comuna.
+```{r}
+
+poblacion_comuna <- read.csv("bases_clase_1/gcba_pob_comunas_17.csv")
+
+poblacion_comuna <- poblacion_comuna %>% 
+  mutate(COMUNA = as.character(COMUNA))
+
+```
+
+Luego, debemos realizar el join por número de comuna.
+```{r}
+
+poblacion_comuna <- left_join(caba, poblacion_comuna, by=c("COMUNAS" = "COMUNA"))
+
+
+```
+
+Ahora calculamos la densidad de la población.
+La columna "AREA" está en metros cuadrados. Por lo cual, primero debemos pasarla a kms2 y luego dividir por la población total.
+```{r}
+
+sf_use_s2(FALSE)
+
+poblacion_comuna <- poblacion_comuna %>% 
+  mutate(area_kms = AREA / 1000000,
+          Densidad = POBLACION / area_kms)
+
+# otra manera
+poblacion_comuna <- poblacion_comuna %>% 
+  mutate(area_kms2 = as.numeric(round(set_units(st_area(poblacion_comuna$geometry), km2),2)))
+
+
+```
+
+Graficamos.
+```{r}
+
+ggplot()+
+  geom_sf( data = caba)+
+  geom_sf(data = poblacion_comuna, aes(fill = Densidad))+
+  scale_fill_viridis_c(name = "Densidad poblacional\npor Comuna",
+                       breaks= seq(10000,30000, 5000))+
+  labs(title = "Densidad poblacional en la CABA",
+       subtitle = "Hab / kms2")+
+  theme_void()
+
+
+```
+
+Podemos agregar los barrios sobre este mapa para distinguir.
+```{r}
+
+barrios <- st_read("bases_clase_1/barrios_caba/barrios_wgs84.shp")
+
+```
+
+Podemos agregar los nombres de los barrios para tener más clara la distribución.
+```{r}
+
+barrios <- barrios  %>% 
+  mutate(lon = map_dbl(geometry, ~st_point_on_surface(.x)[[1]]),
+         lat = map_dbl(geometry, ~st_point_on_surface(.x)[[2]]))
+
+
+ggplot()+
+  geom_sf( data = caba)+
+  geom_sf(data = poblacion_comuna, aes(fill = Densidad))+
+  geom_sf(data = barrios, fill=NA, col="black")+
+    geom_text(data = barrios, aes(x = lon, y = lat, label = BARRIO),
+               size=1.7)+
+  scale_fill_viridis_c(name = "Densidad poblacional\npor Comuna",
+                       breaks= seq(10000,30000, 5000))+
+  labs(title = "Densidad poblacional en la CABA",
+       subtitle = "Hab / kms2")+
+  theme_void()
+
+```
+
+está disponible también el mapa de calles de la CABA.
+```{r}
+calles <- st_read("bases_clase_1/callejero.csv", crs = 4326 )
+```
+
+Grafiquemos las calles por barrio.
+```{r}
+
+ggplot()+
+  geom_sf(data = caba)+
+  geom_sf(data = calles, aes(col=BARRIO))+
+  theme(legend.position = "None")
+
+
+```
+
+Podríamos destacar las avenidas.
+```{r}
+
+ggplot()+
+  geom_sf(data = caba)+
+  geom_sf(data = calles)+
+  geom_sf(data = filter(calles, tipo_c == "AVENIDA"), col="green")+
+  theme(legend.position = "None")
+
+```
+
+¿Ciclovías?
+```{r}
+
+ggplot()+
+  geom_sf(data = caba)+
+  geom_sf(data = calles)+
+  geom_sf(data = filter(calles, tipo_c == "AVENIDA"), col="green")+
+  geom_sf(data = filter(calles, bicisenda == "Ciclovías"), col= "orange")+
+  theme(legend.position = "None")
+
+
+```
+
+De la misma manera podemos filtrar por comuna si queremos hacer alguna comparación.
+```{r}
+
+ggplot()+
+  geom_sf(data = caba)+
+  geom_sf(data = calles)+
+  geom_sf(data = filter(calles, tipo_c == "AVENIDA"
+                        & COMUNA %in% c("13","8")), col="green")+
+  geom_sf(data = filter(calles, bicisenda == "Ciclovías" & COMUNA %in% c("13","8")), col= "orange")+
+ theme(legend.position = "None")
+
+
+```
+Agreguemos una leyenda.
+```{r}
+
+ggplot()+
+  geom_sf(data = caba)+
+  geom_sf(data = calles)+
+  geom_sf(data = filter(calles, tipo_c == "AVENIDA"
+                        & COMUNA %in% c("13","8")), aes(col= "Avenidas"))+
+  geom_sf(data = filter(calles, bicisenda == "Ciclovías" & COMUNA %in% c("13","8")),
+          aes(col= "Ciclovías"))+
+  scale_color_manual(name = "Avenidas y ciclovías\nen Comunas 13 y 8",
+                     labels = c("Avenidas", "Ciclovías"),
+                     values = c("Avenidas" = "green",
+                                "Ciclovías" = "orange"))+
+  theme_void()
+
+
+```
+
+Agregamos el contorno de la Comuna.
+```{r}
+
+ggplot()+
+  geom_sf(data = caba)+
+  geom_sf(data = calles)+
+  geom_sf(data = filter(calles, tipo_c == "AVENIDA"
+                        & COMUNA %in% c("13","8")), aes(col= "Avenidas"))+
+  geom_sf(data = filter(calles, bicisenda == "Ciclovías" & COMUNA %in% c("13","8")),
+          aes(col= "Ciclovías"))+
+  geom_sf(data = filter(caba, COMUNAS %in% c("13", "8")), col="red", fill=NA)+
+  scale_color_manual(name = "Avenidas y ciclovías\nen Comunas 13 y 8",
+                     labels = c("Avenidas", "Ciclovías"),
+                     values = c("Avenidas" = "green",
+                                "Ciclovías" = "orange"))+
+  theme_void()
+
+```
+
+
+Salvemos el mapa como imagen en formato .png
+En primer lugar, guardamos el mapa en un objeto.
+```{r}
+
+mapa_caba <- ggplot()+
+              geom_sf(data = caba)+
+              geom_sf(data = calles)+
+              geom_sf(data = filter(calles, tipo_c == "AVENIDA"
+                                    & COMUNA %in% c("13","8")), aes(col= "Avenidas"))+
+              geom_sf(data = filter(calles, bicisenda == "Ciclovías" & COMUNA %in% c("13","8")),
+                      aes(col= "Ciclovías"))+
+              geom_sf(data = filter(caba, COMUNAS %in% c("13", "8")), col="red", fill=NA)+
+              scale_color_manual(name = "Avenidas y ciclovías\nen Comunas 13 y 8",
+                                 labels = c("Avenidas", "Ciclovías"),
+                                 values = c("Avenidas" = "green",
+                                            "Ciclovías" = "orange"))+
+              theme_void()
+
+```
+
+Finalmente, lo guardamos con la función ggsave()
+```{r}
+
+ggsave("mapa_caba.png")
+
+
+```
+

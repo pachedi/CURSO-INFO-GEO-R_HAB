@@ -1,0 +1,3 @@
+"0","Quilmes_rios <- st_intersection(Quilmes_rios$osm_lines, quilmes)
+"
+"2","Warning: attribute variables are assumed to be spatially constant throughout all geometries"

@@ -1,0 +1,1 @@
+{"height":393.07787391841779,"width":636.0,"size_behavior":0,"conditions":[[1,"Warning: `stat(level)` was deprecated in ggplot2 3.4.0.\nPlease use `after_stat(level)` instead."]]}

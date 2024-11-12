@@ -1,0 +1,64 @@
+
+
+library(sf)
+library(tidyverse)
+library(ggrepel)
+library(units)
+
+
+
+
+indec_wfs <-st_layers("WFS:https://www.ign.es/wfs-inspire/unidades-administrativas?REQUEST=GetCapabilities&SERVICE=WFS&VERSION=2.0.0")
+
+indec_wfs$name
+
+
+"au:AdministrativeBoundary"
+
+
+
+url <- "https://geoservicios.indec.gob.ar/geoserver/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
+
+url <- "https://www.ign.es/wfs-inspire/unidades-administrativas?request=GetFeature&SERVICE=WFS&VERSION=2.0.0&typeName="
+
+url <- "https://www.ign.es/wfs-inspire/unidades-administrativas?REQUEST=GetFeature&SERVICE=WFS&FeatureType="
+
+capa_wfs <- "au:AdministrativeBoundary"
+
+actividad_radios <- st_read(paste0(url,capa_wfs))
+
+
+
+
+url <- st_layers("WFS:http://ide.gijon.es:8080/geoserver/wfs?request=GetCapabilities&service=WFS")
+
+
+url$name
+
+capa_wfs <- "au:AdministrativeUnit"
+
+actividad_radios <- st_read(paste0(url,capa_wfs))
+
+ola <- st_read("https://idechg.chguadalquivir.es/ogc/wfs?SERVICE=WFS&REQUEST=DescribeFeatureType&VERSION=2.0.0")
+
+url <- st_layers("WFS:https://servicios.idee.es/wfs-inspire/transportes?REQUEST=GetCapabilities&SERVICE=WFS&VERSION=2.0.0")
+
+
+url <- "https://servicios.idee.es/wfs-inspire/transportes?REQUEST=Getfeature&SERVICE=WFS&VERSION=2.0.0&count=1&Typenames="
+
+
+capa_wfs <- "tn-ra:RailwayStationArea"
+
+transporte <- st_read(paste0(url,capa_wfs))
+
+url$name
+
+
+ola <- st_read("http://www.ign.es/wfs-inspire/unidades-administrativas?REQUEST=GetFeature&SERVICE=WFS&VERSION=2.0.0&COUNT=1&srsName=EPSG:4326&TYPENAMES=au:AdministrativeBoundary")
+
+
+ggplot()+
+  geom_sf(data=transporte)
+
+
+

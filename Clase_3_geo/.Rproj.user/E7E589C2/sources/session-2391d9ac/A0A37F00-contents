@@ -1,0 +1,49 @@
+url2 <- "https://servicios.usig.buenosaires.gob.ar/mapcache/tms/1.0.0/amba_con_transporte_3857@GoogleMapsCompatible/{z}/{x}/{-y}.png"
+
+
+
+request <- GET(
+  url = url,
+  query = list(client_id = client_id,
+               client_secret = client_secret)
+)data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAWElEQVR42mNgGPTAxsZmJsVqQApgmGw1yApwKcQiT7phRBuCzzCSDSHGMKINIeDNmWQlA2IigKJwIssQkHdINgxfmBBtGDEBS3KCxBc7pMQgMYE5c/AXPwAwSX4lV3pTWwAAAABJRU5ErkJggg==
+
+request$status_code
+
+names(request)
+
+response <- content(request, as = "text", encoding = "UTF-8")
+
+install.packages("tiler")
+library(tiler)
+library(raster)
+
+tile_dir <- file.path(tempdir(), "tiles")
+
+map <- system.file("https://servicios.usig.buenosaires.gob.ar/mapcache/tms/1.0.0/amba_con_transporte_3857@GoogleMapsCompatible/{z}/{x}/{-y}.png", package = "tiler")
+(r <- raster(map))
+
+
+
+leaflet() %>% 
+  addTiles() %>% 
+  setView(lng =  -58.3895861, lat=-34.6107111  , zoom = 9) %>%
+  addWMSTiles(
+    url2,
+    layers = "0",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  ) %>% 
+  addWMSTiles(
+    dengue,
+    layers = "GeoServiciosCONAE:FocosDeCalor",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+  ) %>% 
+  addMarkers(data=com_indi, ~lon, ~lat, popup = ~as.character(nom_com) ,
+             clusterOptions = markerClusterOptions())  
+
+
+
+
+
+
+

@@ -1,0 +1,3 @@
+"0","quilmes_barrios_inter <- st_intersection(radios_quilmes, barrios_centroide)
+"
+"2","Warning: attribute variables are assumed to be spatially constant throughout all geometries"

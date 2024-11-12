@@ -1,0 +1,3 @@
+"0",""
+"0","cercanos <- subte[st_nearest_feature(radios_puntos, subte),]"
+"0",""

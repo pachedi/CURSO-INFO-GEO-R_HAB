@@ -1,0 +1,5 @@
+"0",""
+"0","leaflet(sesenta) %>% "
+"0","  addTiles() %>% "
+"0","  addMarkers(lng = ~ longitude, "
+"0","             lat = ~ latitude)"

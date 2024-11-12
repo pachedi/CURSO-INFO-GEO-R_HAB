@@ -1,0 +1,1 @@
+{"frames":[{"func":"st_write(resultado_sf, \"./obelisco/obelisco.shp\", crs = 4326)","file":"","line_number":0,"end_line_number":0,"character_number":0,"end_character_number":0}],"message":"Error in st_write(resultado_sf, \"./obelisco/obelisco.shp\", crs = 4326) : \n  object 'resultado_sf' not found\n"}

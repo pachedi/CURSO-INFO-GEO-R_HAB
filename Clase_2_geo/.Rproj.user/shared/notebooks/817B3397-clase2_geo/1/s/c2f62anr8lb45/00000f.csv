@@ -1,0 +1,7 @@
+"0",""
+"0","bsas_caba <- deptos %>% "
+"0","  filter(codpcia %in% c(""02"", ""06""))"
+"0",""
+"0","ggplot(data=bsas_caba)+"
+"0","  geom_sf(aes(fill= departamen))+"
+"0","  theme(legend.position = ""None"")"

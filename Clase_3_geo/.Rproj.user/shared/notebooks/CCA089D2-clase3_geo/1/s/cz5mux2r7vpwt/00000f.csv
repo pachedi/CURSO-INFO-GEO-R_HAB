@@ -1,0 +1,6 @@
+"0",""
+"0","cod_prov  <- cod_prov %>% "
+"0","  select(nombre, link )"
+"2","Error in (function (classes, fdef, mtable)  : 
+  unable to find an inherited method for function ‘select’ for signature ‘""data.frame""’
+"

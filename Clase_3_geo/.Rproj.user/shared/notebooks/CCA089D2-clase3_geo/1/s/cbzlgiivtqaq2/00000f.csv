@@ -1,0 +1,3 @@
+"0",""
+"0","radios_join  <-  st_sf(radios_join, sf_column_name = 'geom.x')"
+"0",""

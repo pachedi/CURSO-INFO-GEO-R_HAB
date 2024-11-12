@@ -1,0 +1,8 @@
+"0",""
+"0","caba <- caba %>% "
+"0","  mutate(COMUNAS = as.factor(COMUNAS))"
+"0",""
+"0",""
+"0","ggplot(data=caba)+"
+"0","  geom_sf(aes(fill= COMUNAS))"
+"0",""

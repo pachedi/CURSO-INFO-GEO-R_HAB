@@ -1,0 +1,71 @@
+library(sf)
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(leaflet)
+library(htmltools)
+library(ows4R)
+
+
+
+CNE_wfs <-"https://servicios.ine.es/arcgis/services/WFS_INE_SECCIONES_G01/MapServer/WFSServer?"
+
+url <- parse_url(CNE_wfs)
+
+url$query <- list(service = "wfs",
+                  #version = "2.0.0", 
+                  request = "getcapabilities"
+                  #typename = "WFS_INE_SECCIONES_G01:Distritos2023",
+                  #srsName = "EPSG:4326"
+)
+
+
+request <- build_url(url)
+
+request
+
+
+wfs_espana <- st_layers(request)
+
+wfs_espana$name
+
+ab <- st_read(request)
+
+#url <-st_layers("WFS:http://www.ign.es/wfs-inspire/hidrografia-btn100?request=GetCapabilities")
+
+capa_wfs <- ""
+
+nuevo_url <- st_layers("WFS:http://www.conselldemallorca.info/ide/ws_limits/MapServer/WFSServer?request=GetCapabilities&service=WFS")
+
+
+nuevo_url$name
+
+CNE_wfs <-"http://www.conselldemallorca.info/ide/ws_limits/MapServer/WFSServer?request="
+CNE_wfs <-"http://wxs.ign.fr/inspire/wfs"
+
+
+
+mallorca_cap <-st_layers("WFS:http://wxs.ign.fr/inspire/wfs?request=GetCapabilities&service=WFS")
+https://wxs.ign.fr/geoportail/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities
+
+mallorca_cap$name
+
+url <- parse_url(CNE_wfs)
+
+url$query <- list(service = "wfs",
+                  version = "2.0.0", 
+                  request = "getfeature",
+                  #typename = "ws_limits:Municipis",
+                  typename = "tn:TransportNetwork",
+                  srsName = "EPSG:4326"
+)
+
+
+request <- build_url(url)
+request
+capa_descarga <- st_read(request)
+
+
+ggplot()+
+  geom_sf(data = capa_descarga, aes(fill=municipi))+
+  theme(legend.position = "none")

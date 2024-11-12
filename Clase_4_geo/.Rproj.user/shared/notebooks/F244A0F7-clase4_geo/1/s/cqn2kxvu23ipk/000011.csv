@@ -1,0 +1,5 @@
+"0","st_write(resultado_sf, ""./obelisco/obelisco.shp"", crs=4326)
+"
+"2","Error in st_write(resultado_sf, ""./obelisco/obelisco.shp"", crs = 4326) : 
+  object 'resultado_sf' not found
+"

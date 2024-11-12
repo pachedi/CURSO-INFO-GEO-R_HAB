@@ -1,0 +1,6 @@
+"0",""
+"0","radios_barrios <- as.data.frame(radios_barrios) %>% "
+"0","  group_by(BARRIO) %>% "
+"0","  summarise(distancia_promedio = mean(distancia))"
+"0",""
+"0",""

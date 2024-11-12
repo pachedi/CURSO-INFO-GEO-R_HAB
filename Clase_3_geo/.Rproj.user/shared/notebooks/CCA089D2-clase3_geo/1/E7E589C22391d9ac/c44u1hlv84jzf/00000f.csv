@@ -1,0 +1,7 @@
+"0",""
+"0","request <- GET("
+"0","  url = url,"
+"0","  query = list(client_id = client_id,"
+"0","               client_secret = client_secret)"
+"0",")"
+"0",""

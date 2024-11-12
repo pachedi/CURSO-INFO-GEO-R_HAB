@@ -1,0 +1,4 @@
+"0",""
+"0","plot1 <- piramide(poblacion_bp_quilmes, bpop = ""si"")"
+"0","plot2 <- piramide(ciudad_formal, bp=""no"")"
+"0","grid.arrange(plot1, plot2, ncol=2)"

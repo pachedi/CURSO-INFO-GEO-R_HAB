@@ -95,7 +95,7 @@ Afortunadamente, existe una manera de ordenar esta variable, transformando el da
 ```{r}
 
 caba <- caba %>% 
-  mutate(COMUNAS = as.factor(COMUNAS))
+  mutate(COMUNAS = factor(COMUNAS, levels=1:15))
 
 
 ggplot(data=caba)+
@@ -548,7 +548,7 @@ ggplot()+
                         & COMUNA %in% c("13","8")), aes(col= "Avenidas"))+
   geom_sf(data = filter(calles, bicisenda == "Ciclovías" & COMUNA %in% c("13","8")),
           aes(col= "Ciclovías"))+
-  geom_sf(data = filter(caba, COMUNAS %in% c("13", "8")), col="red", fill=NA)+
+  geom_sf(data = filter(caba, COMUNAS %in% c("13", "8")), col="red", fill=NA, lwd=0.8)+
   scale_color_manual(name = "Avenidas y ciclovías\nen Comunas 13 y 8",
                      labels = c("Avenidas", "Ciclovías"),
                      values = c("Avenidas" = "green",
@@ -569,7 +569,7 @@ mapa_caba <- ggplot()+
                                     & COMUNA %in% c("13","8")), aes(col= "Avenidas"))+
               geom_sf(data = filter(calles, bicisenda == "Ciclovías" & COMUNA %in% c("13","8")),
                       aes(col= "Ciclovías"))+
-              geom_sf(data = filter(caba, COMUNAS %in% c("13", "8")), col="red", fill=NA)+
+              geom_sf(data = filter(caba, COMUNAS %in% c("13", "8")), col="red", fill=NA, lwd=1)+
               scale_color_manual(name = "Avenidas y ciclovías\nen Comunas 13 y 8",
                                  labels = c("Avenidas", "Ciclovías"),
                                  values = c("Avenidas" = "green",
@@ -581,7 +581,7 @@ mapa_caba <- ggplot()+
 Finalmente, lo guardamos con la función ggsave()
 ```{r}
 
-ggsave("mapa_caba.png")
+ggsave("mapa_caba.png", dpi=300)
 
 
 ```

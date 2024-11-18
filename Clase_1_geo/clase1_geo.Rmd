@@ -581,7 +581,7 @@ mapa_caba <- ggplot()+
 Finalmente, lo guardamos con la función ggsave()
 ```{r}
 
-ggsave("mapa_caba.png", dpi=300)
+ggsave("mapa_caba.png", dpi=300, bg="white")
 
 
 ```

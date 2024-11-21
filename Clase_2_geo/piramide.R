@@ -38,7 +38,7 @@ pir <- pir  %>%
   rename(Poblacion = n)
 
 
-ggplot(pir, aes(x = Edad, color=Sexo,
+ggplot(pir, aes(x = Edad, color=Sexo,fill=Sexo,
                 y = ifelse(test = Sexo == "M",
                            yes = -Poblacion, no = Poblacion))) + 
   geom_bar(stat = "identity") +
@@ -49,6 +49,9 @@ ggplot(pir, aes(x = Edad, color=Sexo,
        subtitle = "Provincia de Buenos Aires, Argentina",
        caption= "Fuente: Elaboración propia en base a datos\n del Censo Nacional de hogares y viviendas Argentina 2010")+
   scale_color_manual(name= "Género",
+                     values= c("F" = "red",
+                               "M" = "blue"))+
+  scale_fill_manual(name= "Género",
                      values= c("F" = "red",
                                "M" = "blue"))+
   theme_minimal()+

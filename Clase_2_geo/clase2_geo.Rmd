@@ -54,18 +54,17 @@ Guardemos entonces sólo la CABA y la Provincia de Buenos Aires y graficamos con
 bsas_caba <- deptos %>% 
   filter(codpcia %in% c("02", "06"))
 
+
 ggplot(data=bsas_caba)+
   geom_sf(aes(fill= departamen))+
   theme(legend.position = "None")
-
-
 
 
 ```
 
 ## Gran Buenos Aires
 
-Ahora trabajemos con los 24 Partidos del GBA. Debemos realizar un nuevo filtro que incluya los nombres de estos 40 partidos.
+Ahora trabajemos con los 40 Partidos del GBA. Debemos realizar un nuevo filtro que incluya los nombres de estos 40 partidos.
 ```{r}
 
 cuarenta <- c("Almirante Brown", "Avellaneda", "Berazategui", 
@@ -127,7 +126,7 @@ Por defecto, st_area() nos devuelve resultados en metros 2 (tal como lo indica e
 
 ```{r}
 
-area = round(set_units(st_area(amba), km^2,2),4)
+area = round(set_units(st_area(amba), km^2),2)
 
 area
 ```
@@ -136,18 +135,19 @@ area
 Ahora que tenemos la manera, vamos a transformarlo en una columna,
 ```{r}
 
-amba$area = area
+amba$area <-  area
 
-amba$area_numero = as.numeric(area)
+
+amba$area_numero <-  as.numeric(area)
 
 ```
 
 Grafiquemos sólo para visualizar:
 ```{r}
 
-ggplot(data=amba)+
+ggplot()+
   geom_sf(data = caba, col=NA, fill="gray")+
-  geom_sf(aes(fill=area_numero), alpha= 0.7)+
+  geom_sf(data=amba, aes(fill=area_numero))+
   scale_fill_viridis_c(name = "Area en kms2")+
   theme_void()
 
@@ -161,12 +161,14 @@ amba <- amba %>%
   mutate(densidad_poblacional = round(personas / area_numero,2))
 
 
-ggplot(data=amba)+
-  geom_sf(aes(fill=densidad_poblacional), col=NA)+
+ggplot()+
+  geom_sf(data=amba, aes(fill=densidad_poblacional), col=NA)+
   geom_sf(data=caba, fill="gray", col=NA)+
   scale_fill_viridis_c(name= "Densidad poblacional",
-                       breaks = seq(0,12000, by=2000))
+                       breaks = seq(0,10000, by=2000))
   
+
+#seq(0,1000, by=2000)
 
 ```
 
@@ -181,6 +183,12 @@ mapa_bsas <- ggplot(data = bsas_caba) +
   theme_void() +
   theme(panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.5))
 ```
+
+```{r}
+mapa_bsas
+
+```
+
 
 ```{r}
 
@@ -202,11 +210,16 @@ p <- ggplot(data = amba) +
   )
 
 ```
+```{r}
+
+p
+```
+
+
 
 ```{r}
 
-ggsave("quilmes.png", plot = p, width = 10, height = 6, units = "in", dpi = 300,
-       bg="white")
+ggsave("area_metropolitana.png", plot = p, width = 10, height = 6, units = "in", dpi = 300, bg="white")
 
 ```
 
@@ -227,7 +240,7 @@ Le agregamos un cuadrado que refiera a los límites de Quilmes y lo guardamos en
 inset = ggplot() +
   geom_sf(data = caba, fill= "gray", col=NA)+
   geom_sf(data = amba, fill = "white") + 
-  geom_sf(data = partido_quilmes_bb, fill = "NA", color = "yellow", lwd = 0.7) +
+  geom_sf(data = partido_quilmes_bb, fill = "NA", color = "yellow", lwd = 0.9) +
   theme_void()
 
 inset
@@ -239,6 +252,12 @@ Ahora creamos el mapa de Quilmes que queremos mostrar, encuadrado por un marco y
 ```{r}
 
 radios_quilmes <- st_read("bases_clase2/quilmes/radios_censales_quilmes_con_edades.geojson")
+
+```
+```{r}
+
+ggplot() + 
+  geom_sf(data = radios_quilmes)
 
 ```
 
@@ -261,13 +280,13 @@ Finalmente, sumamos los dos mapas y agregamos las líneas que unes los mapas de 
   cowplot::ggdraw() +
   coord_equal(xlim = c(0, 20), ylim = c(0, 20), expand = FALSE) +
   annotation_custom(ggplotGrob(inset), xmin = 3.8, xmax = 12, ymin = 10, ymax = 20) +
-  annotation_custom(ggplotGrob(main), xmin = 0.5, xmax = 18, ymin = 0, ymax = 9.6) +
+  annotation_custom(ggplotGrob(main), xmin = 0.5, xmax = 18, ymin = 0, ymax = 9.6)+
   geom_segment(aes(x = 9.5, xend = 11.3, y = 14, yend = 9.3), color = "yellow", linewidth = 1.2) +
   geom_segment(aes(x = 8.9, xend = 3.4, y = 14, yend = 9.2), color = "yellow", linewidth = 1.2)
 
 #gg_inset_map1
 
-ggsave("imagen.png")
+ggsave("imagen.png", dpi=300, bg="white")
 ```
 
 ## Piramide poblacional
@@ -277,7 +296,7 @@ Continuando con variables demográficas, realicemos un ejercicio para crear una 
 
 ```{r}
 
-quilmes <- read.csv("bases_clase2/quilmes/quilmes_censo_link.csv")
+quilmes <- read.csv("bases_clase2/quilmes/quilmes_censo_link2.csv")
 
 quilmes <- quilmes %>% 
   select("P02", "P03", "link")
@@ -318,7 +337,7 @@ pir <- pir  %>%
 Graficamos:
 ```{r}
 
-ggplot(pir, aes(x = Edad, color=Sexo,
+ggplot(pir, aes(x = Edad, color=Sexo,fill= Sexo,
                  y = ifelse(test = Sexo == "M",
                             yes = -Poblacion, no = Poblacion))) + 
   geom_bar(stat = "identity") +
@@ -329,6 +348,9 @@ ggplot(pir, aes(x = Edad, color=Sexo,
        subtitle = "Provincia de Buenos Aires, Argentina",
        caption= "Fuente: Elaboración propia en base a datos\n del Censo Nacional de hogares y viviendas Argentina 2010")+
   scale_color_manual(name= "Género",
+                     values= c("F" = "red",
+                               "M" = "blue"))+
+    scale_fill_manual(name= "Género",
                      values= c("F" = "red",
                                "M" = "blue"))+
   theme_minimal()+
@@ -356,10 +378,10 @@ radios_quilmes <- st_read("bases_clase2/quilmes/radios_censales_quilmes_con_edad
 bpop_quilmes <- st_read("bases_clase2/quilmes/barrios_pop_quilmes.geojson")
 
 ggplot(data=radios_quilmes)+
-  geom_sf()+
-  geom_sf(data=bpop_quilmes, col="red")
+  geom_sf(data=bpop_quilmes, col="red", fill=NA)
 
 ```
+
 Podemos visualizar el tipo de barrio popular a través del color.
 ```{r}
 

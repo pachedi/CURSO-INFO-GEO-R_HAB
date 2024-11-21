@@ -73,6 +73,8 @@ Agreguemos ahora un color por comuna para distinguir esas comunas.
 ggplot(data=caba)+
   geom_sf(aes(fill= COMUNAS))
 
+
+#class(caba$COMUNAS)
 ```
 ¿Qué sucedió?
 Si bien distingue las comunas, entiende el número de comuna como una variable de rango numérico. Lo adecuado sería tener una variable categórica.
@@ -117,8 +119,8 @@ ggplot(data=caba)+
 Podemos también quitar las coordenadas geográficas y agregar un título:
 ```{r}
 
-ggplot(data=caba)+
-  geom_sf(aes(fill= COMUNAS))+
+ggplot()+
+  geom_sf(data=caba,aes(fill= COMUNAS))+
   labs(title = "Mapa de la CABA por comuna:")+
   theme_void()+
   theme(legend.position = "None")
@@ -154,9 +156,9 @@ Hagamos lo mismo entonces pero cambiando el orden de las capas:
 
 ```{r}
 
-ggplot(data=caba)+
-  geom_sf(aes(fill= COMUNAS))+
-  geom_sf(data=rivadavia, col="red", lwd=1)+
+ggplot()+
+  geom_sf(data=caba, aes(fill= COMUNAS))+
+  geom_sf(data=rivadavia, col="red", lwd=0.5)+
   labs(title = "Mapa de la CABA por comuna:")+
   theme_void()+
   theme(legend.position = "None")
@@ -173,6 +175,8 @@ La forma de realizarlo es obtener el centroide del polígono y ahí situar la et
 caba2 <- caba  %>% 
   mutate(lon = map_dbl(geometry, ~st_point_on_surface(.x)[[1]]),
          lat = map_dbl(geometry, ~st_point_on_surface(.x)[[2]]))
+
+
 ```
 
 
@@ -182,10 +186,10 @@ Graficamos.
 
 ggplot() +
   geom_sf(data = caba2, aes(fill=COMUNAS)) +
-  geom_sf(data=rivadavia, col="red")+
+  geom_sf(data=rivadavia, col="red",lwd=1)+
   geom_label_repel(data = caba2, aes(x = lon, y = lat, label = COMUNAS))+
   labs(title = "Mapa de la CABA por comuna:",
-       caption="Elaboración propia en base a datos abiertos CABA")+
+       caption="Fuente: Elaboración propia en base a datos abiertos CABA")+
   theme_void()+
   theme(legend.position = "None")
 
@@ -213,7 +217,8 @@ establecimientos_agrupados <- escuelas %>%
   summarise(cantidad = n())
 
 establecimientos_agrupados <- establecimientos_agrupados %>% 
-  mutate(comuna = as.factor(comuna))
+  mutate(comuna = factor(comuna, levels=1:15)) %>% 
+  arrange(-cantidad)
 
 
 
@@ -315,7 +320,7 @@ Podemos mejorar la visualización agregando una escala y agregar un nombre más 
 
 ggplot(data = radios)+
   geom_sf( col =NA,aes(fill=H_CON_NBI))+
-  scale_fill_gradient(low = "blue", high= "white",
+  scale_fill_gradient(low = "white", high= "red",
                       name= "Cantidad de hogares con NBI")
 
 ```
@@ -329,7 +334,7 @@ ggplot(data = radios)+
   geom_sf( col =NA,aes(fill=H_CON_NBI))+
   geom_sf(data=bpop, fill=NA)+
   #geom_label_repel(data = bpop, aes(x = lon, y = lat, label = NOMBRE))
-  scale_fill_gradient(low = "blue", high= "white")
+  scale_fill_gradient(low = "white", high= "red")
 
 ```
 
@@ -344,7 +349,7 @@ Graficamos las estaciones:
 ```{r}
 
 ggplot()+
-  geom_sf( data = caba)+
+  geom_sf(data = caba)+
   geom_sf(data= subte, aes(col=LINEA) )
 ```
 
@@ -378,7 +383,8 @@ ggplot()+
                                "D" = "green",
                                "E" = "violet",
                                "H" = "yellow"))+
-  labs(title= "Lineas de subte", subtitle = "CABA, Argentina")+
+  labs(title= "Lineas de subte", subtitle = "CABA, Argentina",
+       caption="Fuente: Elaboración propia en base a datos abiertos")+
   theme_void()
 
 

@@ -1,7 +1,0 @@
-
-API STADIA
-Sys.setenv( MY_PWD="88fdf6f8-ac46-4028-88ac-23b4e66fffcf")
-
-API ORS
-
-Sys.setenv(API_ORS = "5b3ce3597851110001cf62482569a3c36df84e6cab6cefb4f4925f82")

@@ -183,7 +183,7 @@ Probemos con la CABA.
 
 ```{r include=FALSE}
 
-ggmap::register_stadiamaps("88fdf6f8-ac46-4028-88ac-23b4e66fffcf")
+ggmap::register_stadiamaps("")
 
 ```
 
@@ -367,13 +367,13 @@ Es importante revisar la [documentacion](https://openrouteservice.org/dev/#/api-
 
 #set_config(use_proxy(url="10.3.100.207",port=8080))
 
-# options(openrouteservice.paths = list(directions = "v2/directions",
-#                                         isochrones = "v2/isochrones",
-#                                         matrix = "v2/matrix",
-#                                         geocode = "geocode",
-#                                         pois = "pois",
-#                                         elevation = "elevation",
-#                                         optimization = "optimization"))
+ #options(openrouteservice.paths = list(directions = "v2/directions",
+  #                                       isochrones = "v2/isochrones",
+  #                                       matrix = "v2/matrix",
+  #                                       geocode = "geocode",
+  #                                       pois = "pois",
+  #                                       elevation = "elevation",
+  #                                       optimization = "optimization"))
 
 
 ```
@@ -381,7 +381,7 @@ Es importante revisar la [documentacion](https://openrouteservice.org/dev/#/api-
 Seteamos nuestra key value
 ```{r, include=FALSE}
 
-ors_api_key("5b3ce3597851110001cf62482569a3c36df84e6cab6cefb4f4925f82")
+ors_api_key("")
 
 ```
 

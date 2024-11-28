@@ -57,8 +57,8 @@ Getfeature y GetCapabilities
 Get capabilities nos permitirá ver el menú de opciones disponibles para descargar:
 ```{r}
 
-indec_wfs <-st_layers("WFS:http://geoservicios.indec.gov.ar/geoserver/wfs?getcapabilities")
-
+indec_wfs <-st_layers("WFS:https://geoservicios.indec.gob.ar/geoserver/wfs?request=GetCapabilities")
+                         
 ```
 Vamos a la lista name y encontraremos los nombres disponibles de las capas para descargar.
 ```{r}
@@ -82,9 +82,9 @@ typenName indicamos el nombre de la capa que obtuvimos con GetCapabilities.
 
 url <- "https://geoservicios.indec.gob.ar/geoserver/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
 
-capa_wfs <- "geocenso2010:actividad_radio"
+capa_wfs <- "geocenso2010:analfabetismo_pcia"
 
-actividad_radios <- st_read(paste0(url,capa_wfs))
+analf_prov <- st_read(paste0(url,capa_wfs))
 
 ```
 
@@ -95,8 +95,8 @@ actividad_radios <- st_read(paste0(url,capa_wfs))
 
 #renaper$name
 
-ggplot(data = actividad_radios)+
-  geom_sf(aes(fill=tasa_desocupacion), col=NA)+
+ggplot(data = analf_prov)+
+  geom_sf(aes(fill=tasa_analfabetismo), col=NA)+
   scale_fill_viridis_c()
 
 
@@ -107,16 +107,30 @@ ggplot(data = actividad_radios)+
 Podemos por ejemplo descargar una nueva capa
 ```{r}
 
-url_po <- "https://poblacion.idear.gov.ar/geoserver/wfs?request=GetFeature&service=WFS&typeName="
-capa_wfs <- "geonode:comunidades_indigenas_2021"
-com_indi <- st_read(paste0(url_po,capa_wfs))
+#poblacion <- st_layers("WFS:https://poblacion.idear.gov.ar/geoserver/wfs?request=GetCapabilities")
+
+#poblacion <- st_layers("WFS:https://geoservicios.conae.gov.ar/geoserver/GeoServiciosCONAE/wfs?request=GetCapabilities")
+
+educ <- st_layers("WFS:https://mapa.educacion.gob.ar/geoserver/ows?service=wfs&version=1.1.0&request=GetCapabilities")
+
+educ$name
+
+#url_po <- "https://geoservicios.conae.gov.ar/geoserver/GeoServiciosCONAE/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
+
+url_ed <- "https://mapa.educacion.gob.ar/geoserver/ows?service=wfs&version=1.1.0&request=GetFeature&typeName="
+
+capa_wfs <-       "publico:institucion_universitaria"
+
+educ_wfs <- st_read(paste0(url_ed,capa_wfs))
+
 
 ```
+
 
 Visualizamos.
 ```{r}
 
-ggplot(data=com_indi)+
+ggplot(data=educ_wfs)+
   geom_sf()
 
 ```

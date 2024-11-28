@@ -398,9 +398,9 @@ Luego, tenemos que pasar como parámetros nuestros token de seguridad.
 
 ```{r include=FALSE}
 
-client_id = "60e745a216294723b27f83ff2a6e13b9"
+client_id = ""
 
-client_secret = "358a4D45EECa42EF954Ff8eB492A37B5"
+client_secret = ""
 
 ```
 

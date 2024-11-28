@@ -74,7 +74,9 @@ En este caso podemos pasar el polígono de Quilmes y solicitar las calles en for
 #?opq
 #?osmdata_sf
 
-Quilmes_calles <- opq(quilmes) %>% 
+bbox <- getbb("Partido de Quilmes,Buenos aires, Argentina", format_out = "data.frame")
+
+Quilmes_calles <- opq(bbox) %>% 
   add_osm_feature(key = "highway") %>% 
   osmdata_sf()
 
@@ -114,11 +116,11 @@ Luego debemos realizar la misma operación para intersectar la información.
 
 #?add_osm_feature
 
-Quilmes_hospi <- opq(quilmes) %>% 
+Quilmes_hospi <- opq(bbox) %>% 
   add_osm_feature(key = "amenity", value = "hospital") %>% 
   osmdata_sf()
 
-Quilmes_rios<- opq(quilmes) %>% 
+Quilmes_rios<- opq(bbox) %>% 
   add_osm_feature(key = "waterway") %>% 
   osmdata_sf()
 
@@ -162,8 +164,8 @@ ggplot() +
   geom_sf(data = filter(Quilmes_calles, str_detect(name, "Avenida")), 
           color = "green")+
   geom_sf(data = Quilmes_rios, color = 'blue', size = 1.5)+
-  #geom_sf(data = Quilmes_hospi, color= "yellow")+
-  geom_image(data = Quilmes_hospi, aes(x,y, image = image), size=0.03, col="red")+
+  geom_sf(data = Quilmes_hospi, color= "yellow")+
+  #geom_image(data = Quilmes_hospi, aes(x,y, image = image), size=0.03, col="red")+
   theme_void()+
   theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
   labs(title = "Partido de Quilmes",
@@ -183,7 +185,7 @@ Probemos con la CABA.
 
 ```{r include=FALSE}
 
-ggmap::register_stadiamaps("")
+ggmap::register_stadiamaps("88fdf6f8-ac46-4028-88ac-23b4e66fffcf")
 
 ```
 
@@ -285,7 +287,7 @@ Podemos darle un punto de inicio (en este caso el obelisco)
 ```{r}
 
 leaflet() %>% 
-  setView(lng = -58.3841453, lat =  -34.6037345, zoom= 12) %>% 
+  setView(lng = -58.3841453, lat =  -34.6037345, zoom= 15) %>% 
   addTiles()
 
 ```
@@ -298,6 +300,7 @@ Carguemos una base con los barrios de CABA.
 barrios <- st_read("base_clase_4/barrios_caba/barrios_wgs84.shp")
 
 ```
+
 Ahora, cargamos la capa encima de la capa de open street maps
 ```{r}
 
@@ -361,27 +364,12 @@ library(tidyverse)
 
 Debemos setear el host y configurar las opciones que nos da la API.
 Es importante revisar la [documentacion](https://openrouteservice.org/dev/#/api-docs/)
-```{r}
 
-#options(openrouteservice.url = "http://localhost:8080/ors")
-
-#set_config(use_proxy(url="10.3.100.207",port=8080))
-
- #options(openrouteservice.paths = list(directions = "v2/directions",
-  #                                       isochrones = "v2/isochrones",
-  #                                       matrix = "v2/matrix",
-  #                                       geocode = "geocode",
-  #                                       pois = "pois",
-  #                                       elevation = "elevation",
-  #                                       optimization = "optimization"))
-
-
-```
 
 Seteamos nuestra key value
 ```{r, include=FALSE}
 
-ors_api_key("")
+ors_api_key("5b3ce3597851110001cf62482569a3c36df84e6cab6cefb4f4925f82")
 
 ```
 
@@ -404,7 +392,7 @@ Podemos limitar los resultados por los límites de un país.
 ```{r}
 
 #?ors_geocode
-santa_fe <- ors_geocode("Santa Fe", boundary.country = "AR")
+santa_fe <- ors_geocode("Santa Fe", boundary.country = "ES")
 
 leaflet() %>%
   addTiles() %>%
@@ -526,7 +514,7 @@ ciudad <- c()
 comuna <- c()
 barrio <- c()
   
-  for(i in 1:length(y$features)){
+for(i in 1:length(y$features)){
     
     # coordenadas  
  coordenadas_x <- append(coordenadas_x,y$features[[i]]$geometry$coordinates[1])

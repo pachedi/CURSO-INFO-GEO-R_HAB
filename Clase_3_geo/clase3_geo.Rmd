@@ -631,6 +631,7 @@ Ahora podemos graficar los radios censales a partir de su distancia de una estac
 
 ggplot() +
 geom_sf(data = caba, aes(fill = distancia), color = NA) +
+geom_sf(data= subte, aes(col=LINEA))+
 scale_fill_viridis_c(breaks= seq(0,6000,1000)) +
 labs(title = "Distancia a estación de subte más cercana",
 subtitle = "Ciudad Autónoma de Buenos Aires",

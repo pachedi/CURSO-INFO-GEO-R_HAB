@@ -579,9 +579,16 @@ ggplot() +
   scale_fill_viridis_c() +
   theme_void()+
   labs(title = "Barrios populares y elevación del suelo",
-       subtitle = "Partido de Quilmes, Pcia de Buenos Aires", fill = "Elevacion (metros)")
+       subtitle = "Partido de Quilmes, Pcia de Buenos Aires", fill = "Elevacion (metros)") + theme(
+  panel.border = element_rect(color = "black", fill = NA, size = 1)
+)
 
 ```
+
+```{r}
+#ggsave("elevacion_q.png", plot = p, width = 10, height = 6, units #= "in", dpi = 300, bg="white")
+```
+
 
 Al tener tres dimensiones, R permite graficar 3D.
 Señalamos la proyección y le agregamos contorno.

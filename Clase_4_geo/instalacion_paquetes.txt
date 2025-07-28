@@ -1,0 +1,3 @@
+RUMBA devtools::install_github(“bitsandbricks/RUMBA”) Antes de instalar osmdata Terminal: sudo apt-get install libproj-dev install.packages(“proj4”) remotes::install_github(“hypertidy/proj”)
+
+Libreria ggsn devtools::install_github("oswaldosantos/ggsn")

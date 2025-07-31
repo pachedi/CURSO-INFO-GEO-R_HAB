@@ -33,7 +33,7 @@ library(ows4R)
 WFS refiere a Web Feature Service que es básicamente un servicios al que podemos conectarnos para obtener bases de datos geográficas.
 Vamos a aprender entonces a conectranos al WFS del INDEC para descargar información geográfica.
 Si buscamos en internet "indec geoservicios" nos obtendremos la siguiente url:
-http://geoservicios.indec.gov.ar/geoserver/wfs
+https://geoservicios.indec.gov.ar/geoserver/wfs
 Esa va a ser la url básica para conectarnos con el servicio.
 Los WFS tienen 11 operaciones básicas:
 
@@ -119,7 +119,7 @@ educ$name
 
 url_ed <- "https://mapa.educacion.gob.ar/geoserver/ows?service=wfs&version=1.1.0&request=GetFeature&typeName="
 
-capa_wfs <-       "publico:institucion_universitaria"
+capa_wfs <-"publico:institucion_universitaria"
 
 educ_wfs <- st_read(paste0(url_ed,capa_wfs))
 
@@ -137,6 +137,16 @@ ggplot(data=educ_wfs)+
 
 ¿Qué pasa si quisiéramos filtrar una provinciao departamento?
 No tenemos esa información. Por lo cual, debemos primero descargar las capas de departamentos y provincias y hacer los correspondientes joins.
+```{r}
+
+uba <- educ_wfs %>% 
+  filter(id_universidad == 33)
+
+ggplot()+
+  geom_sf(data= uba)
+
+
+```
 
 ```{r}
 
@@ -145,16 +155,34 @@ wfs_deptos <- "sig:v_departamentos"
 wfs_prov <- "sig:v_provincias"
 
 
-radios_codigo <- st_read(paste0(url,wfs_radios_codigo ))
+#radios_codigo <- st_read(paste0(url,wfs_radios_codigo ))
 
+radios_codigo <- st_read("radios_censo/radios_censales.shp")
+
+ggplot()+
+  geom_sf(data= radios_codigo)
 
 ```
+
+
 ```{r}
 url <- "https://geoservicios.indec.gob.ar/geoserver/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
 
 capa_wfs <- "geocenso2010:actividad_radio"
 
-actividad_radios <- st_read(paste0(url,capa_wfs))
+actividad_radios <- st_read("actividad_radios/actividad_radio_censal.shp")
+
+# actividad_radios <- st_read(paste0(url,capa_wfs))
+```
+
+
+```{r}
+
+ggplot()+
+  geom_sf(data= actividad_radios, aes(fill=ts_dscp), col=NA)+
+  scale_fill_viridis_c()
+  
+
 ```
 
 Es posible realizar un join espacial, pero no es este el caso. Lo que queremos es realiar un join simplemente con información de columnas.
@@ -184,6 +212,11 @@ El código que necesitamos es la combinación entre el código de provincia y el
 Creamos entonces esa columna.
 ```{r}
 
+radios_join <- radios_join   %>% 
+  mutate(codpcia = str_pad(codpcia, width=2, side="left", pad="0"))
+
+radios_join <- radios_join   %>% 
+  mutate(coddpto = str_pad(coddpto, width=3, side="left", pad="0"))
 
 radios_join$nuevo_coddepto <- paste0(radios_join$codpcia, radios_join$coddpto)
 
@@ -220,8 +253,8 @@ Realizamos el join.
 cod_prov  <- cod_prov %>% 
   dplyr::select(nombre, link ) 
 
-radios_join   <-  radios_join %>% 
-  mutate(codpcia = str_pad(codpcia, width = 2, side = "left", pad = "0"))
+#radios_join   <-  radios_join %>% 
+#  mutate(codpcia = str_pad(codpcia, width = 2, side = "left", pad = "0"))
 
 radios_join <- left_join(radios_join, cod_prov, by=c("codpcia" = "link"))
 
@@ -231,7 +264,7 @@ radios_join <- left_join(radios_join, cod_prov, by=c("codpcia" = "link"))
 No olvidemos ahora, volver a transformar nuestra base en SF
 ```{r}
 
-radios_join  <-  st_sf(radios_join, sf_column_name = 'geom.x')
+radios_join  <-  st_sf(radios_join, sf_column_name = 'geometry.x')
 
 ```
 
@@ -239,13 +272,13 @@ radios_join  <-  st_sf(radios_join, sf_column_name = 'geom.x')
 ```{r}
 
 mendoza <- radios_join %>% 
-  filter(nombre.y == "Mendoza")
+  filter(nombre == "Mendoza")
 
 buenosaires <- radios_join %>% 
-  filter(nombre.y == "Buenos Aires")
+  filter(nombre == "Buenos Aires")
 
 caba <- radios_join %>% 
-  filter(nombre.y == "Ciudad Autónoma de Buenos Aires" )
+  filter(nombre == "Ciudad Autónoma de Buenos Aires" )
 
 class(caba)
 names(buenosaires)
@@ -265,7 +298,13 @@ Grafiquemos
 ```{r}
 
 ggplot(data=mendoza)+
-  geom_sf(col = NA, aes(fill= tasa_desocupacion))
+  geom_sf(col = NA, aes(fill= ts_dscp))
+
+
+ggplot(data=filter(caba, nombre.y == "Comuna 6"))+
+  geom_sf(col=NA, aes(fill=ts_dscp))+
+  scale_fill_viridis_c()
+
 
 ```
 
@@ -296,7 +335,7 @@ leaflet() %>%
   addWMSTiles(
     mapa_satelite,
     layers = "Mosaico_SACC",
-    options = WMSTileOptions(format = "image/png", transparent = TRUE)
+   options = WMSTileOptions(format = "image/png", transparent = TRUE)
   )  
 
 ```
@@ -319,7 +358,7 @@ leaflet() %>%
   ) %>% 
   addWMSTiles(
     dengue,
-    layers = "HAPN:RiesgoAmbiental2022",
+    layers = "HAPN:RiesgoAmbiental2024",
     options = WMSTileOptions(format = "image/png", transparent = TRUE
                              )
   ) 
@@ -562,6 +601,7 @@ En primer lugar cargamos la base de radios censales de CABA.
 
 
 caba <- read_sf("bases_clase3/caba_radios/caba.shp", crs=4326)
+
 ggplot()+
   geom_sf(data=caba)
 

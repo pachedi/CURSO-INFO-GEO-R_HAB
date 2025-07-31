@@ -35,7 +35,11 @@ library(htmlwidgets)
 library(webshot)
 #install_github("wch/webshot")
 #install.packages("nominatimlite")
-#remotes::install_github("dkahle/ggmap")
+remotes::install_github("dkahle/ggmap")
+
+
+
+
 ```
 
 ## MAPAS CON OPEN STREET MAP
@@ -185,7 +189,7 @@ Probemos con la CABA.
 
 ```{r include=FALSE}
 
-ggmap::register_stadiamaps("88fdf6f8-ac46-4028-88ac-23b4e66fffcf")
+ggmap::register_stadiamaps("7c7dedd0-69d3-4860-8270-be97f36140eb")
 
 ```
 
@@ -223,16 +227,21 @@ class(caba_bb)
 
 caba_bb <- unname(caba_bb)
 
-
+st_bbox(caba_bb)
 
 ```
 
 Ahora sí, utilizamos la función get_stadiamap() y le indicamos el bbox, el tipo de mapa que queremos y el zoom.
+
+
+
 ```{r}
+caba_bb <- c(left = -58.53145, bottom = -34.70582, right = -58.33514, top = -34.52655)
+
 
 cabaterra <- get_stadiamap(bbox = caba_bb, 
                           maptype = "stamen_terrain", 
-                          zoom=12)
+                          zoom=12) 
 
 ```
 Con ggmap() visualizamos.
@@ -369,7 +378,7 @@ Es importante revisar la [documentacion](https://openrouteservice.org/dev/#/api-
 Seteamos nuestra key value
 ```{r, include=FALSE}
 
-ors_api_key("5b3ce3597851110001cf62482569a3c36df84e6cab6cefb4f4925f82")
+ors_api_key("7c7dedd0-69d3-4860-8270-be97f36140eb")
 
 ```
 
@@ -474,10 +483,6 @@ leaflet() %>%
   addGeoJSON(ruta, fill=FALSE) %>%
   fitBBox(ruta$bbox)
 
-```
-
-
-```{r}
 ```
 
 
@@ -801,18 +806,35 @@ ggplot()+
 
 ```
 
+Primero cargamos la base que contiene los polígonos de los barrios.
+```{r}
+
+barrios <- st_read("base_clase_4/barrios_caba/barrios_wgs84.shp")
+
+```
+
 
 ```{r}
 
-sannic <- nominatimlite::geo_lite_sf(address = "San Nicolas, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+sannic_p <- nominatimlite::geo_lite_sf(address = "San Nicolas, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
 
-pmad <- nominatimlite::geo_lite_sf(address = "Puerto Madero, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+sannic <- getbb( "San Nicolas, Comuna 1,Ciudad autonoma de Buenos aires, Argentina", format_out = "data.frame") 
 
-santelmo <- nominatimlite::geo_lite_sf(address = "San Telmo, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+pmad <- getbb( "Puerto Madero,Ciudad autonoma de Buenos aires, Argentina", format_out = "data.frame") 
 
-monserrat <- nominatimlite::geo_lite_sf(address = "retiro, Comuna 1, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+pmad_p <- nominatimlite::geo_lite_sf(address = "Puerto Madero, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
 
-comuna1 <- nominatimlite::geo_lite_sf(address = "Comuna 1, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+santelmo <- getbb( "San Telmo ,Ciudad autonoma de Buenos aires, Argentina", format_out = "data.frame") 
+
+santelmo_p <- nominatimlite::geo_lite_sf(address = "San Telmo, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+
+montserrat <- getbb( "Montserrat,Ciudad autonoma de Buenos aires, Argentina", format_out = "data.frame") 
+
+monserrat_p <- nominatimlite::geo_lite_sf(address = "retiro, Comuna 1, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
+
+comuna1 <- getbb( "Comuna 1,Ciudad autonoma de Buenos aires, Argentina", format_out = "data.frame") 
+
+comuna1_p <- nominatimlite::geo_lite_sf(address = "Comuna 1, Ciudad autonoma de Buenos aires, Argentina", points_only = FALSE)
 
 monserrat <- filter(barrios, BARRIO == "MONSERRAT")
 
@@ -828,23 +850,25 @@ santelmo_calles <- opq(santelmo) %>%
   add_osm_feature(key = "highway") %>% 
   osmdata_sf()
 
-monserrat_calles <- opq(monserrat) %>% 
-  add_osm_feature(key = "highway") %>% 
-  osmdata_sf()
+#monserrat_calles <- opq(monserrat) %>% 
+#  add_osm_feature(key = "highway") %>% 
+#  osmdata_sf()
 
 comuna1_calles <- opq(comuna1) %>% 
   add_osm_feature(key = "highway") %>% 
   osmdata_sf()
 
-sannics_calles <- st_intersection(sannics_calles$osm_lines, sannic)
+sannics_calles <- st_intersection(sannics_calles$osm_lines, sannic_p)
 
-pmad_calles <- st_intersection(pmad_calles$osm_lines, pmad)
+pmad_calles <- st_intersection(pmad_calles$osm_lines, pmad_p)
 
-santelmo_calles <- st_intersection(santelmo_calles$osm_lines, santelmo)
+santelmo_calles <- st_intersection(santelmo_calles$osm_lines, santelmo_p)
 
-monserrat_calles <-st_intersection(monserrat_calles$osm_lines, monserrat)
+#monserrat_calles <-st_intersection(monserrat_calles$osm_lines, monserrat_p)
 
-comuna1_calles <-st_intersection(comuna1_calles$osm_lines, comuna1)
+comuna1_calles <-st_intersection(comuna1_calles$osm_lines, comuna1_p)
+
+
 
 ggplot()+
   #geom_sf(data = sannics_calles)+
@@ -874,18 +898,13 @@ ggplot()+
   theme_void()
 ```
 
-Primero cargamos la base que contiene los polígonos de los barrios.
-```{r}
 
-barrios <- st_read("base_clase_4/barrios_caba/barrios_wgs84.shp")
-
-```
 
 Luego, creamos un vector que contenga los nombres de los barrios que queremos.
 ```{r}
 
 microcentro <- c("SAN NICOLAS", "SAN TELMO", "MONSERRAT",
-                 "PUERTO MADERO", "RETIRO")
+                 "PUERTO MADERO", "RETIRO", "CONSTITUCION")
 
 ```
 
@@ -894,18 +913,24 @@ Como ya conocemos el procedimiento para descargar las calles, podemos crear un c
 
 for(i in microcentro){
   
-  barrio <- barrios %>% 
+  barrio_u <- barrios %>% 
     filter(BARRIO == i) # filtra por barrio
   
-  barrio_calles <- opq(barrio) %>% 
+  numero <- which(barrios$BARRIO == i)
+  
+  bb_barrio <- st_bbox(barrios$geometry[numero])
+  
+  bb_barrio <- unname(bb_barrio)
+  
+  barrio_calles <- opq(bb_barrio) %>% 
   add_osm_feature(key = "highway") %>% 
   osmdata_sf() # descarga las calles
   
-  barrio_calles <- st_intersection(barrio_calles$osm_lines, barrio) 
+  barrio_calles <- st_intersection(barrio_calles$osm_lines, barrio_u) 
   # intersecta por barrio
   nombre <- gsub(" ", "", i) # elimina los espacios ej: sannicolas
   
-  assign( paste0(nombre, "_calle"), barrio_calles ,envir= globalenv())
+  assign( paste0(nombre, "_calles"), barrio_calles ,envir= globalenv())
   # crea el objeto en el ambiente global.
 }
 
@@ -917,11 +942,12 @@ Graficamos.
 ```{r}
 
 ggplot()+
-  geom_sf(data = SANNICOLAS_calle)+
-  geom_sf(data =  SANTELMO_calle)+
-  geom_sf(data = MONSERRAT_calle)+
-  geom_sf(data = PUERTOMADERO_calle)+
-  geom_sf(data = RETIRO_calle)+ 
+  geom_sf(data = SANNICOLAS_calles)+
+  geom_sf(data =  SANTELMO_calles)+
+  geom_sf(data = MONSERRAT_calles)+
+  geom_sf(data = PUERTOMADERO_calles)+
+  geom_sf(data = RETIRO_calles)+ 
+  geom_sf(data = CONSTITUCION_calles)+
   geom_sf(data=casa_rosada_arte, aes(col= Type))+
   labs(title= "Arte y entretenimiento en el microcentro",
        subtitle= "CABA, Argentina",

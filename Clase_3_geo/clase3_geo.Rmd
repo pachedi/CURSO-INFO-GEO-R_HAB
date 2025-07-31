@@ -149,6 +149,13 @@ radios_codigo <- st_read(paste0(url,wfs_radios_codigo ))
 
 
 ```
+```{r}
+url <- "https://geoservicios.indec.gob.ar/geoserver/wfs?request=GetFeature&service=WFS&srsName=EPSG:4326&typeName="
+
+capa_wfs <- "geocenso2010:actividad_radio"
+
+actividad_radios <- st_read(paste0(url,capa_wfs))
+```
 
 Es posible realizar un join espacial, pero no es este el caso. Lo que queremos es realiar un join simplemente con información de columnas.
 Para hacerlo, debemos transformar los objetos sf en df comunes.
@@ -398,9 +405,9 @@ Luego, tenemos que pasar como parámetros nuestros token de seguridad.
 
 ```{r include=FALSE}
 
-client_id = ""
+client_id = "60e745a216294723b27f83ff2a6e13b9"
 
-client_secret = ""
+client_secret = "358a4D45EECa42EF954Ff8eB492A37B5"
 
 ```
 

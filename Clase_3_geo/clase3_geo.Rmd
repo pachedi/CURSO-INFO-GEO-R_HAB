@@ -473,7 +473,7 @@ Como sabemos, hay muchas líneas de colectivos y eso va a hacer que sea demasiad
 
 
 sesenta = df %>% 
-  filter(route_short_name == "60A")
+  filter(route_short_name == "101A")
   
 
 ```

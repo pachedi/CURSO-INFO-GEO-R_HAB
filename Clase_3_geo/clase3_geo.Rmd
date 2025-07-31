@@ -218,7 +218,10 @@ Realizamos el join.
 ```{r}
 
 cod_prov  <- cod_prov %>% 
-  dplyr::select(nombre, link )
+  dplyr::select(nombre, link ) 
+
+radios_join   <-  radios_join %>% 
+  mutate(codpcia = str_pad(codpcia, width = 2, side = "left", pad = "0"))
 
 radios_join <- left_join(radios_join, cod_prov, by=c("codpcia" = "link"))
 

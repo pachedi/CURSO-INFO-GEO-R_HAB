@@ -244,6 +244,8 @@ A través de un join, podemos agregar la cantidad de establecimientos a la comun
 establecimientos_agrupados = as.data.frame(establecimientos_agrupados) %>% 
   select(-3)
 
+caba2 <- caba2 %>% 
+  mutate(COMUNAS = factor(COMUNAS, levels=1:15)) 
 
 caba_establecimientos <- left_join(caba2, establecimientos_agrupados,
                                    by= c("COMUNAS" = "comuna"))

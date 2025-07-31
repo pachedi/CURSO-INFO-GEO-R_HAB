@@ -51,6 +51,8 @@ ggplot(data=deptos)+
 Guardemos entonces sólo la CABA y la Provincia de Buenos Aires y graficamos con color por departamento.
 ```{r}
 
+class(deptos$codpcia)
+
 bsas_caba <- deptos %>% 
   filter(codpcia %in% c("02", "06"))
 
@@ -83,7 +85,7 @@ cuarenta <- c("Almirante Brown", "Avellaneda", "Berazategui",
 # ,  "General San Martín", "Lanús","Almirante Brown",
 #  "San Isidro", "Avellaneda", "Morón","Lomas de Zamora", "Tres de Febrero")
 
-
+class(bsas_caba$personas)
 
 amba <- bsas_caba %>% 
   filter(departamen %in% cuarenta ) %>% 
@@ -126,7 +128,9 @@ Por defecto, st_area() nos devuelve resultados en metros 2 (tal como lo indica e
 
 ```{r}
 
-area = round(set_units(st_area(amba), km^2),2)
+#?set_units
+
+area <-  round(set_units(st_area(amba), km^2),2)
 
 area
 ```
@@ -137,6 +141,7 @@ Ahora que tenemos la manera, vamos a transformarlo en una columna,
 
 amba$area <-  area
 
+class(amba$area)
 
 amba$area_numero <-  as.numeric(area)
 
@@ -162,7 +167,7 @@ amba <- amba %>%
 
 
 ggplot()+
-  geom_sf(data=amba, aes(fill=densidad_poblacional), col=NA)+
+  geom_sf(data=amba, aes(fill=densidad_poblacional))+
   geom_sf(data=caba, fill="gray", col=NA)+
   scale_fill_viridis_c(name= "Densidad poblacional",
                        breaks = seq(0,10000, by=2000))
@@ -221,6 +226,7 @@ p
 
 ggsave("area_metropolitana.png", plot = p, width = 10, height = 6, units = "in", dpi = 300, bg="white")
 
+
 ```
 
 
@@ -231,6 +237,8 @@ Para tener referencias correctas, primero guardamos las coordenadas del Partido 
 partido_quilmes <- st_read("bases_clase2/quilmes/partido_quilmes.geojson")
 
 partido_quilmes_bb = st_as_sfc(st_bbox(partido_quilmes))
+
+# bounding box
 
 ```
 
@@ -243,7 +251,7 @@ inset = ggplot() +
   geom_sf(data = partido_quilmes_bb, fill = "NA", color = "yellow", lwd = 0.9) +
   theme_void()
 
-inset
+print(inset)
 
 ```
 
@@ -264,7 +272,7 @@ ggplot() +
 ```{r}
 
 main = ggplot() + 
-  geom_sf(data = radios_quilmes, aes(fill = totalpobl), col=NA) +
+  geom_sf(data = radios_quilmes, aes(fill = totalpobl)) +
   scale_fill_carto_c(palette = "Mint", name="Población\npor radio censal") +
   geom_sf(data = partido_quilmes_bb, fill = NA, color = "yellow", lwd =1.2)+
   labs(caption = "Fuente: Elaboración propia en base a datos del censo 2010")+
